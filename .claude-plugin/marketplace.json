@@ -1,0 +1,24 @@
+{
+  "name": "cc-mods",
+  "owner": {
+    "name": "StarHawkMK1"
+  },
+  "description": "Custom Claude Code mods, plus vendored examples from anthropics/claude-code-playground.",
+  "plugins": [
+    {
+      "name": "blast-radius",
+      "source": "./mods/blast-radius",
+      "description": "Holds risky shell commands and shows what they would change, with Proceed and Cancel buttons."
+    },
+    {
+      "name": "replay-theater",
+      "source": "./mods/replay-theater",
+      "description": "Step through the file edits Claude made in the last turn, one diff at a time."
+    },
+    {
+      "name": "token-weather",
+      "source": "./mods/token-weather",
+      "description": "A live forecast of the context window, drawn above the prompt."
+    }
+  ]
+}
