@@ -1,0 +1,5 @@
+# 로컬 도구 캐시 (graft 인덱서 세션/텔레메트리 파일)
+graft/
+
+# Claude Code가 mod를 로드할 때마다 생성하는 TypeScript 타입
+**/.claude-plugin/types/
