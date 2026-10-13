@@ -9,11 +9,11 @@ Claude Code [mods](https://code.claude.com/docs/en/plugins/mods/overview)를 모
 
 | mod | 하는 일 | 출처 |
 | --- | --- | --- |
-| [`blast-radius`](mods/blast-radius/) | `rm -rf`, `git reset --hard`, 강제 푸시 같은 위험한 셸 명령을 보류하고, 무엇이 바뀌는지 보여 준 뒤 진행/취소 버튼을 띄웁니다. Bash 도구 호출만 감시합니다. | 공식 예시 |
-| [`replay-theater`](mods/replay-theater/) | `/replay`: 마지막 턴에 Claude가 한 파일 편집을 diff 단위로 다시 봅니다. | 공식 예시 |
-| [`token-weather`](mods/token-weather/) | 프롬프트 위에 컨텍스트 윈도우 사용량을 날씨 아이콘과 그래프로 보여 줍니다. | 공식 예시 |
+| [`blast-radius`](mods/blast-radius/) | `rm -rf`, `git reset --hard`, 강제 푸시 같은 위험한 셸 명령을 보류하고, 무엇이 바뀌는지 보여 준 뒤 진행/취소 버튼을 띄웁니다. Bash 도구 호출만 감시합니다. | Anthropic 샘플 |
+| [`replay-theater`](mods/replay-theater/) | `/replay`: 마지막 턴에 Claude가 한 파일 편집을 diff 단위로 다시 봅니다. | Anthropic 샘플 |
+| [`token-weather`](mods/token-weather/) | 프롬프트 위에 컨텍스트 윈도우 사용량을 날씨 아이콘과 그래프로 보여 줍니다. | Anthropic 샘플 |
 
-"공식 예시"는 [anthropics/claude-code-playground](https://github.com/anthropics/claude-code-playground/tree/main/claude-code/mods)에서 수정 없이 복사한 mod입니다. 자세한 출처는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 있습니다.
+"Anthropic 샘플"은 [anthropics/claude-code-playground](https://github.com/anthropics/claude-code-playground/tree/main/claude-code/mods)에서 수정 없이 복사한 mod입니다. upstream이 밝힌 대로 있는 그대로 공유된 샘플이며 공식 제품이 아니고 지원도 없습니다. 자세한 출처는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 있습니다.
 
 ## 설치
 
@@ -30,12 +30,13 @@ Claude Code [mods](https://code.claude.com/docs/en/plugins/mods/overview)를 모
 ### 셸에서
 
 ```bash
-claude plugin install replay-theater --marketplace StarHawkMK1/cc-mods
+claude plugin marketplace add StarHawkMK1/cc-mods
+claude plugin install replay-theater@cc-mods --scope user
 claude plugin install blast-radius@cc-mods --scope user
 claude plugin install token-weather@cc-mods --scope user
 ```
 
-첫 줄이 마켓플레이스 추가와 설치를 함께 합니다. 이미 열려 있는 세션에서는 `/reload-plugins`를 실행해야 반영됩니다.
+첫 줄은 마켓플레이스를 한 번만 등록하고, 그다음 줄들이 원하는 mod를 설치합니다. 이미 열려 있는 세션에서는 `/reload-plugins`를 실행해야 반영됩니다.
 
 ### 자동 업데이트 켜기 (한 번만)
 
@@ -73,7 +74,8 @@ claude --plugin-dir ./mods/replay-theater
 1. `mods/<name>/`에 만듭니다. 최소 구성은 `.claude-plugin/plugin.json`, `hooks/hooks.json`(`"modules": ["./<file>.mjs"]`), 훅 모듈 파일입니다.
 2. `name`은 `claude-`로 시작할 수 없습니다.
 3. `.claude-plugin/marketplace.json`의 `plugins`에 `{ "name": "<name>", "source": "./mods/<name>", "description": "..." }`를 추가합니다. 엔트리에는 `version`을 쓰지 않습니다.
-4. `claude plugin validate .`가 통과해야 합니다.
+4. `claude plugin validate ./mods/<name>`(mod 매니페스트와 훅 정적 분석)와 `claude plugin validate .`(마켓플레이스)가 모두 통과해야 합니다.
+5. 표(이 README의 mod 목록, [`mods/README.md`](mods/README.md))에 한 줄씩 추가합니다.
 
 ### 버전 규칙
 

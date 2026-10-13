@@ -598,14 +598,17 @@ Expected: `0`
 
 - [ ] **Step 3: README의 셸 설치 명령을 글자 그대로 실행**
 
+> 최종 리뷰 반영(2026-10-13): README 셸 설치는 스펙 §8의 두 단계 방식으로 바뀌었다. 한 줄 방식(`--marketplace`)은 2.1.292 이상에서만 동작하기 때문이다.
+
 ```bash
-claude plugin install replay-theater --marketplace StarHawkMK1/cc-mods
+claude plugin marketplace add StarHawkMK1/cc-mods
+claude plugin install replay-theater@cc-mods --scope user
 claude plugin install blast-radius@cc-mods --scope user
 claude plugin install token-weather@cc-mods --scope user
 ```
 Expected:
-- 첫 명령이 `Successfully added marketplace: cc-mods (declared in user settings)`를 출력한 뒤 설치한다
-- 세 명령 모두 `Successfully installed plugin: <mod>@cc-mods (scope: user)`를 출력한다
+- 첫 명령이 `Successfully added marketplace: cc-mods`를 출력한다
+- 나머지 세 명령이 `Successfully installed plugin: <mod>@cc-mods (scope: user)`를 출력한다
 
 첫 명령이 실패하면 README의 명령이 틀린 것이다. 오류를 기록하고 멈춰서 보고한다. README는 실제로 동작하는 명령으로 고친 뒤 다시 실행한다.
 
