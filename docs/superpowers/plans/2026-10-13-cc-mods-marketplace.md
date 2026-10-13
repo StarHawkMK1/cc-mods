@@ -27,14 +27,14 @@
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: https://claude.ai/code/session_0137dKfj4wdxPDVr9AsyW53f
   ```
-- 작업 디렉터리: `C:\dev2\workspace\cc-mods` (Git Bash에서 `/c/dev2/workspace/cc-mods`)
-- 임시 파일은 세션 스크래치패드에 둔다. 셸 변수는 명령 호출 사이에 **유지되지 않는다**. 그래서 `$SCRATCH`, `$UP`, `$SHA`, `$T`를 쓰는 명령 블록 앞에는 항상 아래 공통 변수 정의를 붙여 실행한다. `SCRATCH`는 실행하는 세션의 스크래치패드 경로로 바꾼다. 이번 세션 값은 아래와 같다.
+- 작업 디렉터리: 저장소를 클론한 폴더. 아래 명령에서는 `<REPO>`로 표기한다
+- 임시 파일은 세션 스크래치패드에 둔다. 셸 변수는 명령 호출 사이에 **유지되지 않는다**. 그래서 `$SCRATCH`, `$UP`, `$SHA`, `$T`를 쓰는 명령 블록 앞에는 항상 아래 공통 변수 정의를 붙여 실행한다. `<SCRATCH>`는 실행하는 세션의 스크래치패드(임시 폴더) 경로로, `<REPO>`는 저장소 경로로 바꾼다.
   ```bash
-  SCRATCH=/c/Users/kjoon/AppData/Local/Temp/claude/C--dev2-workspace-cc-mods/bd936eac-82a8-4878-9b97-c93b4053bf95/scratchpad
+  SCRATCH=<SCRATCH>
   UP="$SCRATCH/upstream-569c528"
   SHA=569c5283d9a0a7ee7938df85bb32e4f48cbb8c86
   T="$SCRATCH/blast-test"
-  cd /c/dev2/workspace/cc-mods
+  cd <REPO>
   ```
 
 ## Review Focus
@@ -74,7 +74,7 @@
 - [ ] **Step 1: 실패 확인 (graft가 아직 추적 후보로 보임)**
 
 ```bash
-cd /c/dev2/workspace/cc-mods
+cd <REPO>
 git status --porcelain
 ```
 Expected: `?? graft/`와 `?? docs/CLAUDE_MODS_HANDOFF.md`가 보인다.
@@ -125,7 +125,7 @@ Expected: 마지막 명령의 출력이 비어 있다.
 - [ ] **Step 1: upstream을 고정 커밋으로 새 빈 폴더에 받기**
 
 ```bash
-SCRATCH=/c/Users/kjoon/AppData/Local/Temp/claude/C--dev2-workspace-cc-mods/bd936eac-82a8-4878-9b97-c93b4053bf95/scratchpad
+SCRATCH=<SCRATCH>
 UP="$SCRATCH/upstream-569c528"
 rm -rf "$UP" && mkdir -p "$UP"
 git clone -q --filter=blob:none --no-checkout https://github.com/anthropics/claude-code-playground.git "$UP/repo"
@@ -136,7 +136,7 @@ Expected: `commit`. clone이 2분 넘게 걸리면 `run_in_background`로 돌리
 - [ ] **Step 2: 실패하는 동일성 검사부터 실행**
 
 ```bash
-cd /c/dev2/workspace/cc-mods
+cd <REPO>
 SHA=569c5283d9a0a7ee7938df85bb32e4f48cbb8c86
 for m in blast-radius replay-theater token-weather; do
   if diff <(git -C "$UP/repo" ls-tree -r "$SHA" "claude-code/mods/$m" | awk '{print $3, substr($4, 18)}') \
@@ -230,7 +230,7 @@ Expected: 출력이 비어 있다.
 - [ ] **Step 1: 실패 확인**
 
 ```bash
-cd /c/dev2/workspace/cc-mods
+cd <REPO>
 claude plugin validate . 2>&1 | tail -3
 ```
 Expected: 실패한다. 마켓플레이스나 플러그인 매니페스트를 찾지 못했다는 오류가 나오고 `✔ Validation passed`는 없다.
@@ -323,7 +323,7 @@ EOF
 - [ ] **Step 1: 실패 확인**
 
 ```bash
-cd /c/dev2/workspace/cc-mods
+cd <REPO>
 for f in LICENSE licenses/Apache-2.0.txt THIRD_PARTY_NOTICES.md; do test -f "$f" && echo "$f present" || echo "$f MISSING"; done
 ```
 Expected: 세 줄 모두 `MISSING`.
@@ -395,7 +395,7 @@ EOF
 - [ ] **Step 1: 실패 확인**
 
 ```bash
-cd /c/dev2/workspace/cc-mods
+cd <REPO>
 test -f README.md && echo present || echo MISSING
 ```
 Expected: `MISSING`
@@ -534,7 +534,7 @@ Expected: `✔ Validation passed`
 - [ ] **Step 1: 공개 전 검사 (유출 방지)**
 
 ```bash
-cd /c/dev2/workspace/cc-mods
+cd <REPO>
 git status --porcelain
 git ls-files | grep -E '^graft/|/\.claude-plugin/types/' || echo "NO CACHE OR GENERATED FILES TRACKED"
 git ls-files | wc -l
@@ -732,7 +732,7 @@ Expected: 경로와 `a.txt`가 출력된다. 이 폴더는 9e와 9f에서 쓴다
 - [ ] **Step 5: Commit과 push**
 
 ```bash
-cd /c/dev2/workspace/cc-mods
+cd <REPO>
 git add docs/pilot/2026-10-13-official-examples.md
 git commit -q -F - <<'EOF'
 docs: record pilot results for official example mods
