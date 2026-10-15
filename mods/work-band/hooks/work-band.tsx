@@ -1,9 +1,26 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { AgentRun } from '../types'
-import { costOf, usageTokens, windowOf, type Usage } from './agents'
-import { ACCENT, CLAY, DONE, H, barText, rowSvg } from './draw'
+import type { AgentRun, Panel } from '../types'
+import { costOf, ctxOf, elapsed, fmtCost, fmtTime, fmtTokens, modelName, runModel, totals, usageTokens, windowOf, type Usage } from './agents'
+import {
+  ACCENT,
+  CLAY,
+  DONE,
+  H,
+  HEADER_H,
+  LINE_H,
+  ROW_H,
+  STATUS_GLYPH,
+  agentSvg,
+  barText,
+  compactSvg,
+  ctxBar,
+  gridSvg,
+  gridTiles,
+  headerSvg,
+  rowSvg,
+} from './draw'
 import {
   advance,
   blankWork,
@@ -15,6 +32,7 @@ import {
   pickBar,
   skillStage,
   startRequest,
+  stepsOf,
   updateTodo,
   withList,
   withPlan,
@@ -91,6 +109,10 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     lang = await detectLang($, options.language)
+    await $.command.register({
+      name: 'work-band',
+      description: 'Show or hide the agents panel: running and finished subagents with model, context, cost and time',
+    })
     // Ticks the running agents' clocks; quiet when nothing runs.
     $.clock.every(1000, () => {
       void (async () => {
@@ -326,6 +348,139 @@ export const register: Register = (on, options) => {
           {dismiss}
         </Box>
         {below}
+      </Box>
+    )
+  })
+
+  on('command.run', { command: 'work-band' }, async $ => {
+    const isOpen = await togglePane($)
+    return { text: isOpen ? tr().opened : tr().closed }
+  })
+
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    const s = tr()
+    const ui = $.ui.resolve(e)
+    const { Box, Text, Button } = ui
+    const list = await read($, agents)
+    const w = await read($, work)
+    const p: Panel = await read($, panel)
+    const at = Math.max(await read($, now), ...list.map(a => a.startedAt), 0)
+    const running = list.filter(a => a.status === 'running').reverse()
+    const finished = list.filter(a => a.status !== 'running').reverse()
+    const t = totals(list, at)
+    // A running subagent's own to-do list; never the main session's.
+    const stepsFor = (a: AgentRun) => (a.status === 'running' && a.agentId ? stepsOf(listOf(w, a.agentId)) : null)
+    const summary = `≈${fmtCost(t.cost)}, ${fmtTokens(t.tokens)} ${s.tokensWord}, ${fmtTime(t.time)}`
+
+    const toggleCompact = (
+      <Button key="compact" label={p.isCompact ? s.expand : s.collapse} plain onPress={() => update($, panel, prev => ({ ...prev, isCompact: !prev.isCompact }))} />
+    )
+    const toggleDone = (
+      <Button
+        key="done"
+        label={`${p.isDoneCollapsed ? '▸' : '▾'} ${s.finished} · ${finished.length}`}
+        plain
+        onPress={() => update($, panel, prev => ({ ...prev, isDoneCollapsed: !prev.isDoneCollapsed }))}
+      />
+    )
+
+    if (e.surface === 'desktop' && 'Svg' in ui) {
+      const { Svg } = ui
+      const W = Math.max(240, Math.min(900, (e.props.bodyColumns || 40) * 8 - 8))
+      if (p.isCompact) {
+        return (
+          <Box flexDirection="column" gap={1}>
+            <Svg source={compactSvg(W, list, t)} alt={`${list.length} ${s.pane}, ${summary}`} width={W} height={32} />
+            {toggleCompact}
+          </Box>
+        )
+      }
+      const shownDone = p.isDoneCollapsed ? 0 : finished.length
+      const lines = 1 + (list.length === 0 ? 1 : 0) + (running.length > 0 ? 1 : 0) + (finished.length > 0 ? 1 : 0)
+      const gridH = HEADER_H + lines * LINE_H + (running.length + shownDone) * ROW_H
+      return (
+        <Box flexDirection="column">
+          {/* The grid sizes the pane; the content is placed over it. */}
+          {gridTiles(gridH).map((tileH, i) => (
+            <Svg key={`grid-${i}`} source={gridSvg(W, tileH)} alt="dotted grid" width={W} height={tileH} />
+          ))}
+          <Box flexDirection="column" position="absolute" top={0} left={0} right={0}>
+            <Svg source={headerSvg(W, t, s)} alt={summary} width={W} height={HEADER_H} />
+            {toggleCompact}
+            {list.length === 0 && <Text dimColor>{s.empty}</Text>}
+            {running.length > 0 && <Text dimColor>{`${s.running} · ${running.length}`}</Text>}
+            {running.map(a => (
+              <Svg key={a.id} source={agentSvg(W, a, at, stepsFor(a), s)} alt={`${a.description}: ${modelName(a.model)}, ${s.isRunning}`} width={W} height={ROW_H} />
+            ))}
+            {finished.length > 0 && toggleDone}
+            {!p.isDoneCollapsed &&
+              finished.map(a => (
+                <Svg key={a.id} source={agentSvg(W, a, at, null, s)} alt={`${a.description}: ${modelName(a.model)}, ${s.isFinished}`} width={W} height={ROW_H} />
+              ))}
+          </Box>
+        </Box>
+      )
+    }
+
+    // Terminal: the same content in text rows.
+    const cols = Math.max(24, e.props.bodyColumns || 40)
+    const barW = Math.max(6, Math.min(20, cols - 34))
+    const row = (a: AgentRun) => {
+      const ctx = ctxOf(a)
+      const steps = stepsFor(a)
+      const progress = a.status === 'done' ? 1 : steps ? steps.done / steps.total : null
+      const stepText = steps ? `${steps.done}/${steps.total}${steps.note ? ' ' + steps.note : ''} · ` : ''
+      return (
+        <Box key={a.id} flexDirection="column" marginBottom={1}>
+          <Box flexDirection="row" gap={1}>
+            <Text color={CLAY}>▣</Text>
+            <Text bold wrap="truncate-end">
+              {a.description || a.type}
+            </Text>
+            <Text color={a.status === 'failed' ? 'red' : a.status === 'done' ? 'green' : ACCENT}>{STATUS_GLYPH[a.status]}</Text>
+          </Box>
+          <Text dimColor wrap="truncate-end">
+            {'  '}
+            {a.type} · {runModel(a)}
+          </Text>
+          <Text wrap="truncate-end">
+            {'  '}
+            {progress === null ? <Text dimColor>{ctxBar(ctx, barW)}</Text> : <Text color={ACCENT}>{ctxBar(progress * 100, barW)}</Text>}
+            <Text dimColor>
+              {' '}
+              {stepText}
+              {s.ctx} {ctx}% · {fmtTokens(a.contextTokens)} ≈{fmtCost(a.costUsd)} {fmtTime(elapsed(a, at))}
+            </Text>
+          </Text>
+        </Box>
+      )
+    }
+
+    return (
+      <Box flexDirection="column">
+        <Box flexDirection="row" justifyContent="space-between">
+          <Text dimColor>
+            ≈{fmtCost(t.cost)} · {fmtTokens(t.tokens)} {s.tokensWord} · {fmtTime(t.time)}
+          </Text>
+          {toggleCompact}
+        </Box>
+        {p.isCompact ? (
+          <Text wrap="truncate-end">
+            {[...running, ...finished].map(a => (
+              <Text key={a.id} color={a.status === 'failed' ? 'red' : a.status === 'done' ? 'green' : ACCENT}>
+                {STATUS_GLYPH[a.status]}{' '}
+              </Text>
+            ))}
+          </Text>
+        ) : (
+          <Box flexDirection="column" marginTop={1}>
+            {list.length === 0 && <Text dimColor>{s.empty}</Text>}
+            {running.length > 0 && <Text dimColor>{`${s.running} · ${running.length}`}</Text>}
+            {running.map(row)}
+            {finished.length > 0 && toggleDone}
+            {!p.isDoneCollapsed && finished.map(row)}
+          </Box>
+        )}
       </Box>
     )
   })
