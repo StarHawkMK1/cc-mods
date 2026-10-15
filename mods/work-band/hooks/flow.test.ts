@@ -4,21 +4,26 @@ import type { AgentRun, Flow, Todo, Work } from '../types'
 import {
   MAX_TODOS,
   advance,
+  agentsBar,
   blankWork,
   cleanTodos,
   countTasks,
   createTodo,
+  flowBar,
   listOf,
   mdPathOf,
   onWrite,
+  pickBar,
   requestAgents,
   skillStage,
   startRequest,
   stepsOf,
+  todoBar,
   updateTodo,
   withList,
   withPlan,
 } from './flow'
+import { STRINGS } from './i18n'
 
 const todo = (id: string, status: Todo['status'], title = `T${id}`): Todo => ({ id, title, status })
 
@@ -151,4 +156,53 @@ test('plan helpers', () => {
   expect(mdPathOf('Execute docs/superpowers/plans/2026-10-15-auth.md please')).toBe('docs/superpowers/plans/2026-10-15-auth.md')
   expect(mdPathOf('no path')).toBeUndefined()
   expect(mdPathOf(undefined)).toBeUndefined()
+})
+
+const s = STRINGS.en
+
+test('flowBar: six stages, Build filled by tasks done', () => {
+  const todos = [todo('1', 'completed'), todo('2', 'completed'), todo('3', 'completed'), { id: '4', title: 'T4', activeForm: 'Doing 4', status: 'in_progress' as const }]
+  const spec = flowBar({ stage: 'spec', isFinished: false, topic: 'Auth' }, [], s)
+  expect(spec).toMatchObject({ title: 'Auth', pill: 'Spec', isFlow: true, isFinished: false })
+  expect(Math.round(spec.ratio * 100)).toBe(17)
+  expect(Math.round(spec.runRatio * 1e4)).toBe(Math.round((2 / 6) * 1e4))
+  expect(spec.ticks).toHaveLength(5)
+  const build = flowBar({ stage: 'build', isFinished: false, topic: 'Auth', specTitle: 'Auth spec', planTitle: 'Auth plan', planTasks: 7 }, todos, s)
+  expect(build).toMatchObject({ title: 'Auth plan', pill: 'Build 3/7', doing: 'Doing 4' })
+  expect(Math.round(build.ratio * 100)).toBe(57)
+  expect(Math.round(build.runRatio * 1e4)).toBe(Math.round(((3 + 4 / 7) / 6) * 1e4))
+  expect(flowBar({ stage: 'build', isFinished: false }, todos, s).pill).toBe('Build 3/4')
+  expect(flowBar({ stage: 'build', isFinished: false }, [], s)).toMatchObject({ pill: 'Build', title: 'superpowers' })
+  expect(flowBar({ stage: 'finish', isFinished: true }, [], s)).toMatchObject({ pill: 'Done', ratio: 1, isFinished: true })
+  expect(flowBar({ stage: 'plan', isFinished: false }, [], STRINGS.ko).pill).toBe('계획')
+})
+
+test('todoBar: what is in progress, done out of all', () => {
+  const list = cleanTodos([
+    { content: 'Write the parser', status: 'completed', activeForm: 'Writing the parser' },
+    { content: 'Run the tests', status: 'in_progress', activeForm: 'Running the tests' },
+    { content: 'Update the docs', status: 'pending', activeForm: 'Updating the docs' },
+  ])
+  expect(todoBar(list, s)).toMatchObject({ title: 'Running the tests', pill: 'Tasks 1/3', isFlow: false, isFinished: false })
+  const finished = list.map(t => ({ ...t, status: 'completed' as const }))
+  expect(todoBar(finished, s)).toMatchObject({ title: 'Update the docs', pill: 'Done', ratio: 1, isFinished: true })
+  expect(todoBar([], s)).toBeNull()
+})
+
+test('agentsBar and pickBar: flow, then list, then subagents', () => {
+  const run = (id: string, status: AgentRun['status']): AgentRun => ({
+    id, type: 't', description: id, model: 'm', status, startedAt: 1_000, contextTokens: 0, contextMax: 1, tokens: 0, costUsd: 0, steps: 0,
+  })
+  const runs = [run('a', 'done'), run('b', 'running')]
+  expect(agentsBar(runs, s)).toMatchObject({ title: 'Subagents', pill: 'Agents 1/2', isFinished: false })
+  expect(agentsBar([run('a', 'failed')], s)).toMatchObject({ pill: 'Done', isFinished: true })
+  expect(agentsBar([], s)).toBeNull()
+
+  const w = blankWork()
+  expect(pickBar(w, runs, s)?.title).toBe('Subagents')
+  expect(pickBar({ ...w, todos: [todo('1', 'pending', 'Only task')] }, runs, s)?.title).toBe('Only task')
+  expect(pickBar({ ...w, todos: [todo('1', 'pending')], flow: { stage: 'plan', isFinished: false } }, runs, s)?.pill).toBe('Plan')
+  expect(pickBar({ ...w, isHidden: true, todos: [todo('1', 'pending')] }, runs, s)).toBeNull()
+  expect(pickBar({ ...w, isHidden: true, flow: { stage: 'plan', isFinished: false } }, runs, s)?.pill).toBe('Plan')
+  expect(pickBar(w, [], s)).toBeNull()
 })

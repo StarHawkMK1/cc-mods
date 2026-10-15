@@ -1,4 +1,5 @@
 import type { AgentRun, Flow, Stage, Todo, TodoStatus, Work } from '../types'
+import type { Strings } from './i18n'
 
 export const MAX_TODOS = 200
 export const MAX_TEXT = 120
@@ -172,3 +173,91 @@ export const onWrite = (flow: Flow | null, path: unknown, content?: unknown): Fl
 // A `.md` path in a skill's arguments: the plan an executing skill was handed.
 export const mdPathOf = (args: unknown): string | undefined =>
   typeof args === 'string' ? /[^\s"'`]+\.md\b/i.exec(args)?.[0] : undefined
+
+// ---------------------------------------------------------------------------
+// What the band draws.
+
+export type Bar = {
+  title: string
+  /** The label riding the head of the fill. */
+  pill: string
+  /** Filled share, 0..1. */
+  ratio: number
+  /** Filled plus in-progress share, 0..1: the faint second layer. */
+  runRatio: number
+  /** Where ticks go, as shares of the bar. */
+  ticks: number[]
+  isFinished: boolean
+  /** The superpowers flow's band (✕ ends it) or the harness's (✕ hides it). */
+  isFlow: boolean
+  /** What is in progress now, for the alt text. */
+  doing: string
+}
+
+const doneCount = (todos: Todo[]): number => todos.filter(t => t.status === 'completed').length
+const busyCount = (todos: Todo[]): number => todos.filter(t => t.status === 'in_progress').length
+
+const evenTicks = (n: number): number[] => (n > 1 && n <= 50 ? Array.from({ length: n - 1 }, (_, i) => (i + 1) / n) : [])
+
+// Six equal stages; inside Build the share of tasks done fills its own stage.
+export const flowBar = (flow: Flow, todos: Todo[], s: Strings): Bar => {
+  const n = STAGES.length
+  const at = STAGES.indexOf(flow.stage)
+  const isBuild = flow.stage === 'build'
+  const total = flow.planTasks || todos.length
+  const done = Math.min(total, doneCount(todos))
+  const inner = isBuild && total ? done / total : 0
+  // The stage being worked shows faintly: in Build the tasks in progress, elsewhere the whole stage.
+  const ahead = isBuild && total ? Math.min(total - done, busyCount(todos)) / total : 1
+  return {
+    title: flow.planTitle ?? flow.specTitle ?? flow.topic ?? doingOf(todos) ?? s.superpowers,
+    pill: flow.isFinished ? s.done : isBuild && total ? `${s.stage.build} ${done}/${total}` : s.stage[flow.stage],
+    ratio: flow.isFinished ? 1 : (at + inner) / n,
+    runRatio: flow.isFinished ? 1 : Math.min(1, (at + inner + ahead) / n),
+    ticks: evenTicks(n),
+    isFinished: flow.isFinished,
+    isFlow: true,
+    doing: doingOf(todos) ?? '',
+  }
+}
+
+export const todoBar = (todos: Todo[], s: Strings): Bar | null => {
+  if (!todos.length) return null
+  const done = doneCount(todos)
+  const isFinished = done === todos.length
+  const pending = todos.find(t => t.status !== 'completed')
+  return {
+    title: doingOf(todos) || pending?.title || todos.at(-1)?.title || s.tasks,
+    pill: isFinished ? s.done : `${s.tasks} ${done}/${todos.length}`,
+    ratio: done / todos.length,
+    runRatio: (done + busyCount(todos)) / todos.length,
+    ticks: evenTicks(todos.length),
+    isFinished,
+    isFlow: false,
+    doing: doingOf(todos) ?? '',
+  }
+}
+
+// Ended counts failures too: a failed run is no longer working.
+export const agentsBar = (runs: AgentRun[], s: Strings): Bar | null => {
+  if (!runs.length) return null
+  const running = runs.filter(a => a.status === 'running').length
+  const ended = runs.length - running
+  return {
+    title: s.subagents,
+    pill: running ? `${s.agents} ${ended}/${runs.length}` : s.done,
+    ratio: ended / runs.length,
+    runRatio: 1,
+    ticks: evenTicks(runs.length),
+    isFinished: running === 0,
+    isFlow: false,
+    doing: '',
+  }
+}
+
+// The flow when there is one; else, unless dismissed, the main list, else this request's subagents.
+export const pickBar = (w: Work, runs: AgentRun[], s: Strings): Bar | null => {
+  if (w.flow) return flowBar(w.flow, w.todos, s)
+  if (w.isHidden) return null
+  return todoBar(w.todos, s) ?? agentsBar(requestAgents(runs, w.since), s)
+}
