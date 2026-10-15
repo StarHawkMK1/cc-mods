@@ -1,7 +1,7 @@
 # savvy-progress 자동 진행 막대 설계
 
 - 작성일: 2026-10-15
-- 상태: 사용자 검토 대기
+- 상태: 폐기 (2026-10-15). `2026-10-15-work-band-design.md`로 대체
 - 대상: `mods/savvy-progress/` (johnnyvizz/claude-kit `c871c153`에서 vendoring한 1.2.1)
 - 기준 환경: Claude Code 2.1.299~2.1.300, Windows 11, Git Bash
 

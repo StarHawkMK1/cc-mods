@@ -1,5 +1,7 @@
 # savvy-progress 자동 진행 막대 Implementation Plan
 
+> **폐기됨 (2026-10-15):** savvy-progress 확장안은 쓰지 않는다. 새 설계는 `docs/superpowers/specs/2026-10-15-work-band-design.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** savvy-progress의 프롬프트 위 진행 막대가 `/savvy-flow` 없이도 Claude의 할 일 목록과 서브에이전트 진행을 자동으로 보여 주게 한다.
