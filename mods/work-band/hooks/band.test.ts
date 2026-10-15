@@ -137,3 +137,10 @@ test('a prompt the user did not send is not a new request', async ($, on) => {
   await submit($, 'from my phone', { origin: { kind: 'bridge' } })
   expect(await band($, 'terminal')).toBeNull()
 })
+
+test('a TaskUpdate never touches a TodoWrite row that shares its number', async ($, on) => {
+  world(on)
+  await todoWrite($, TODOS)
+  await taskUpdate($, '1', { status: 'deleted' })
+  expect(await band($, 'terminal')).toContain('Tasks 1/3')
+})

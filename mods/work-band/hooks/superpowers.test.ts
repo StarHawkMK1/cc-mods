@@ -150,3 +150,12 @@ test('a write outside the project root does not start the build', async ($, on) 
   await write($, 'C:\\repo\\src\\app.ts', 'x')
   expect(await band($, 'terminal')).toContain('Build')
 })
+
+test('a Finish turn that did not answer does not end the flow', async ($, on) => {
+  world(on)
+  await skill($, 'superpowers:finishing-a-development-branch')
+  await endTurn($, 'api-error')
+  const shown = await band($, 'terminal')
+  expect(shown).toContain('Finish')
+  expect(shown).not.toContain('Done')
+})

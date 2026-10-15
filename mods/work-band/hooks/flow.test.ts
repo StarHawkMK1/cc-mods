@@ -36,7 +36,8 @@ test('cleanTodos keeps real rows, numbers them and bounds them', () => {
     ...Array.from({ length: 300 }, (_, i) => ({ content: `Task ${i}`, status: 'pending' })),
   ])
   expect(rows).toHaveLength(MAX_TODOS)
-  expect(rows[0]).toEqual({ id: '1', title: 'Write the parser', activeForm: 'Writing the parser', status: 'completed' })
+  // TodoWrite rows get their own ids, never the engine's TaskCreate ids ('1', '2', …).
+  expect(rows[0]).toEqual({ id: 'todo:1', title: 'Write the parser', activeForm: 'Writing the parser', status: 'completed' })
   expect(rows[1]?.status).toBe('pending')
   expect(rows[1]?.title.length).toBe(120)
   expect(rows[1]?.title.endsWith('…')).toBe(true)

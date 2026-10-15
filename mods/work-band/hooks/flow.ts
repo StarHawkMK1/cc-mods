@@ -25,7 +25,8 @@ export const cleanTodos = (todos: unknown): Todo[] =>
     .filter(t => cleanText(t?.content))
     .slice(0, MAX_TODOS)
     .map((t, i) => ({
-      id: String(i + 1),
+      // Never the engine's TaskCreate ids ('1', '2', …): a TaskUpdate must not hit a TodoWrite row.
+      id: `todo:${i + 1}`,
       title: cleanText(t.content) ?? '',
       activeForm: cleanText(t.activeForm),
       status: statusOr(t.status, 'pending'),

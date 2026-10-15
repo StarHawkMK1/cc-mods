@@ -22,9 +22,11 @@ import {
   rowSvg,
 } from './draw'
 import {
+  MAX_TEXT,
   advance,
   blankWork,
   cleanTodos,
+  clip,
   createTodo,
   listOf,
   mdPathOf,
@@ -219,7 +221,7 @@ export const register: Register = (on, options) => {
         id: started.agentId ?? e.tool_use_id,
         agentId: started.agentId,
         type: e.subagentType,
-        description: e.description,
+        description: clip(e.description ?? '', MAX_TEXT),
         model: started.model,
         status: 'running',
         startedAt: at,
@@ -250,7 +252,7 @@ export const register: Register = (on, options) => {
           : {
               ...a,
               model,
-              effort: typeof e.effort === 'string' ? e.effort : a.effort,
+              effort: typeof e.effort === 'string' || typeof e.effort === 'number' ? String(e.effort) : a.effort,
               status: 'running',
               endedAt: undefined,
               contextTokens: usageTokens(usage),
@@ -289,8 +291,10 @@ export const register: Register = (on, options) => {
         return { ...w, agentTodos: rest }
       })
     } else {
-      // The main turn that ran the finishing skill closes the flow.
-      await update($, work, w => (w.flow?.stage === 'finish' && !w.flow.isFinished ? { ...w, flow: { ...w.flow, isFinished: true } } : w))
+      // The main turn that ran the finishing skill closes the flow, if it answered.
+      if (e.reason === 'answer') {
+        await update($, work, w => (w.flow?.stage === 'finish' && !w.flow.isFinished ? { ...w, flow: { ...w.flow, isFinished: true } } : w))
+      }
     }
     return next(e)
   })

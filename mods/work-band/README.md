@@ -6,6 +6,14 @@
 ● Auth login   ▓▓▓▓▓▓▓▓▓▓[ Build 3/7 ]░░│░░░│░░   57%   🦀 ×2   ✕
 ```
 
+## 설치
+
+```text
+/plugin install work-band --marketplace StarHawkMK1/cc-mods
+```
+
+이미 `cc-mods` 마켓플레이스를 추가했다면 `claude plugin install work-band@cc-mods --scope user`로도 됩니다. 테스트한 버전은 Claude Code 2.1.299~2.1.300(Windows 11)입니다.
+
 ## 무엇을 보여 주나
 
 - **superpowers 흐름**: `brainstorming` → spec 문서 → `writing-plans` → 구현(`subagent-driven-development`, `executing-plans`, `test-driven-development`) → `requesting-code-review` → `finishing-a-development-branch`를 6칸 눈금으로 보여 줍니다. 구현 칸은 계획의 작업 수 중 끝난 수만큼 채워집니다. 제목은 plan, spec 문서 제목, brainstorming 주제 순입니다.

@@ -85,7 +85,7 @@ export const spawn = ($: Engine, id: string, description = `Job ${id}`) =>
   } as never)
 export const finish = ($: Engine, id: string) =>
   ($.turn.complete as (e: unknown) => Promise<unknown>)({ agentId: `ag-${id}`, reason: 'answer', answer: 'ok', usage: null })
-export const endTurn = ($: Engine) =>
-  ($.turn.complete as (e: unknown) => Promise<unknown>)({ reason: 'answer', answer: 'ok', usage: null })
+export const endTurn = ($: Engine, reason = 'answer') =>
+  ($.turn.complete as (e: unknown) => Promise<unknown>)({ reason, answer: 'ok', usage: null })
 export const submit = ($: Engine, text: string, extra: Record<string, unknown> = {}) =>
   ($.prompt.submit as (e: unknown) => Promise<unknown>)({ text, wait: false, origin: { kind: 'composer' }, ...extra })
