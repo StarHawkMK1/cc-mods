@@ -1,4 +1,4 @@
-import type { AgentRun, Todo, TodoStatus, Work } from '../types'
+import type { AgentRun, Flow, Stage, Todo, TodoStatus, Work } from '../types'
 
 export const MAX_TODOS = 200
 export const MAX_TEXT = 120
@@ -88,3 +88,87 @@ export const startRequest = (w: Work, at: number): Work => ({
 // This request's subagents: still running, or started since it began.
 export const requestAgents = (list: AgentRun[], since: number): AgentRun[] =>
   list.filter(a => a.status === 'running' || a.startedAt >= since)
+
+// ---------------------------------------------------------------------------
+// The superpowers flow: skills set the stage, files written fill in the rest.
+
+export const STAGES: readonly Stage[] = ['brainstorm', 'spec', 'plan', 'build', 'review', 'finish']
+
+const SKILL_STAGE: Record<string, Stage> = {
+  brainstorming: 'brainstorm',
+  'writing-plans': 'plan',
+  'subagent-driven-development': 'build',
+  'executing-plans': 'build',
+  'test-driven-development': 'build',
+  'requesting-code-review': 'review',
+  'finishing-a-development-branch': 'finish',
+}
+
+// The stage a superpowers skill starts, or null for any other skill.
+export const skillStage = (name: unknown): Stage | null => {
+  if (typeof name !== 'string') return null
+  const key = /^\/?superpowers:([\w-]+)$/.exec(name.trim())?.[1]
+  return key && Object.hasOwn(SKILL_STAGE, key) ? (SKILL_STAGE[key] ?? null) : null
+}
+
+const firstLine = (s: unknown): string | undefined =>
+  typeof s === 'string' ? cleanText(s.split(/\r?\n/).find(l => l.trim())) : undefined
+
+// Brainstorming always starts a new flow; any other skill starts one when there
+// is none or it finished, and otherwise only moves it forward.
+export const advance = (flow: Flow | null, stage: Stage, args?: unknown): Flow => {
+  if (stage === 'brainstorm') {
+    const topic = firstLine(args)
+    return topic ? { stage, isFinished: false, topic } : { stage, isFinished: false }
+  }
+  if (!flow || flow.isFinished) return { stage, isFinished: false }
+  return STAGES.indexOf(stage) > STAGES.indexOf(flow.stage) ? { ...flow, stage } : flow
+}
+
+const slash = (p: string): string => p.replace(/\\/g, '/')
+
+const isUnder = (path: string, dir: string): boolean => {
+  const p = slash(path)
+  return p.startsWith(dir) || p.includes(`/${dir}`)
+}
+
+const SPECS = 'docs/superpowers/specs/'
+const PLANS = 'docs/superpowers/plans/'
+// Writing here does not mean the build began: the flow's own docs, the visual
+// companion's folder, Claude's own settings and memory.
+const NOT_BUILD = ['docs/superpowers/', '.superpowers/', '.claude/']
+
+export const heading = (md: string): string | undefined => firstLine(/^#[ \t]+(.+)$/m.exec(md)?.[1])
+
+export const countTasks = (md: string): number => (md.match(/^###[ \t]+Task\b/gm) ?? []).length
+
+const planTitleOf = (md: string): string | undefined => heading(md)?.replace(/\s+Implementation Plan$/i, '') || undefined
+const specTitleOf = (md: string): string | undefined => heading(md)?.replace(/\s+(설계|Design)$/i, '') || undefined
+
+// The plan's title and task count, where the text has them.
+export const withPlan = (flow: Flow, md: string): Flow => {
+  const title = planTitleOf(md)
+  const tasks = countTasks(md)
+  return { ...flow, ...(title ? { planTitle: title } : {}), ...(tasks ? { planTasks: tasks } : {}) }
+}
+
+// A file the main session wrote or edited (`content` is Write's): the spec
+// moves Brainstorm to Spec, the plan gives title and task count, and any other
+// file in Brainstorm or Spec means the build began without a plan.
+export const onWrite = (flow: Flow | null, path: unknown, content?: unknown): Flow | null => {
+  if (!flow || flow.isFinished || typeof path !== 'string') return flow
+  const text = typeof content === 'string' ? content : undefined
+  const isMd = slash(path).toLowerCase().endsWith('.md')
+  if (isMd && isUnder(path, SPECS)) {
+    const next: Flow = flow.stage === 'brainstorm' ? { ...flow, stage: 'spec' } : flow
+    const title = text ? specTitleOf(text) : undefined
+    return title ? { ...next, specTitle: title } : next
+  }
+  if (isMd && isUnder(path, PLANS)) return text ? withPlan(flow, text) : flow
+  if (NOT_BUILD.some(dir => isUnder(path, dir))) return flow
+  return flow.stage === 'brainstorm' || flow.stage === 'spec' ? { ...flow, stage: 'build' } : flow
+}
+
+// A `.md` path in a skill's arguments: the plan an executing skill was handed.
+export const mdPathOf = (args: unknown): string | undefined =>
+  typeof args === 'string' ? /[^\s"'`]+\.md\b/i.exec(args)?.[0] : undefined
