@@ -1,0 +1,19 @@
+{
+  "name": "work-band",
+  "version": "0.1.0",
+  "description": "A one-line band above the prompt: the stage and progress of a superpowers flow or of Claude's own to-do list, and how many subagents are running.",
+  "author": {
+    "name": "StarHawkMK1"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "auto follows Claude Code's language setting, then the system locale; en or ko",
+      "default": "auto",
+      "options": ["auto", "en", "ko"]
+    }
+  },
+  "license": "Apache-2.0"
+}
