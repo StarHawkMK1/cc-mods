@@ -153,10 +153,20 @@ export const withPlan = (flow: Flow, md: string): Flow => {
   return { ...flow, ...(title ? { planTitle: title } : {}), ...(tasks ? { planTasks: tasks } : {}) }
 }
 
+// An absolute path outside the project root (scratchpad, /tmp, another repo).
+// Relative paths, and any path when the root is unknown, count as inside.
+export const isOutside = (path: string, root?: string): boolean => {
+  if (!root) return false
+  const p = slash(path).toLowerCase()
+  if (!/^([a-z]:)?\//.test(p)) return false
+  const r = slash(root).toLowerCase().replace(/\/+$/, '')
+  return p !== r && !p.startsWith(`${r}/`)
+}
+
 // A file the main session wrote or edited (`content` is Write's): the spec
 // moves Brainstorm to Spec, the plan gives title and task count, and any other
-// file in Brainstorm or Spec means the build began without a plan.
-export const onWrite = (flow: Flow | null, path: unknown, content?: unknown): Flow | null => {
+// file of the project in Brainstorm or Spec means the build began without a plan.
+export const onWrite = (flow: Flow | null, path: unknown, content?: unknown, root?: string): Flow | null => {
   if (!flow || flow.isFinished || typeof path !== 'string') return flow
   const text = typeof content === 'string' ? content : undefined
   const isMd = slash(path).toLowerCase().endsWith('.md')
@@ -166,7 +176,7 @@ export const onWrite = (flow: Flow | null, path: unknown, content?: unknown): Fl
     return title ? { ...next, specTitle: title } : next
   }
   if (isMd && isUnder(path, PLANS)) return text ? withPlan(flow, text) : flow
-  if (NOT_BUILD.some(dir => isUnder(path, dir))) return flow
+  if (NOT_BUILD.some(dir => isUnder(path, dir)) || isOutside(path, root)) return flow
   return flow.stage === 'brainstorm' || flow.stage === 'spec' ? { ...flow, stage: 'build' } : flow
 }
 

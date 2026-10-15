@@ -58,3 +58,9 @@ test('agentSvg shows the subagent’s own steps, else its context', () => {
   expect(withSteps).toContain('1:31')
   expect(agentSvg(400, a, 92_000, null, STRINGS.en)).not.toContain('2/5')
 })
+
+// The engine refuses an Svg over 131072 characters, and a refused band draws nothing.
+test('rowSvg stays well under the Svg size limit at the widest band', () => {
+  const svg = rowSvg(bar({ ratio: 1, runRatio: 1, isFinished: true, pill: 'Done' }), 1600, true)
+  expect(svg.length).toBeLessThan(65_536)
+})

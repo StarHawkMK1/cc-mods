@@ -39,6 +39,7 @@ export function world(on: On, now = 1_000, files: Record<string, string> = {}) {
   on('tool.call', { tool: 'Write' }, () => ({ result: {} }) as never)
   on('tool.call', { tool: 'Edit' }, () => ({ result: {} }) as never)
   on('prompt.submit', (_$, e) => ({ text: e.text }) as never)
+  on('command.run', () => ({ text: '' }) as never)
   on('agent.spawn', (_$, e) => ({ model: 'claude-opus-5-5', agentId: `ag-${e.tool_use_id}` }) as never)
   on('turn.complete', () => ({ text: '' }) as never)
   return { clock, panes: () => panes }

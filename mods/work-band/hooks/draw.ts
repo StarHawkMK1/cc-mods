@@ -85,7 +85,10 @@ export const rowSvg = (b: Bar, W: number, isWorking: boolean): string => {
   const y0 = (H - BAR_H) / 2
   const fillW = Math.round(BAR_W * clamp01(b.ratio))
   const runW = Math.round(BAR_W * clamp01(Math.max(b.ratio, b.runRatio)))
-  const cols = Math.floor(fillW / CELL)
+  // At most 200 dot columns, spaced wider on a wide bar: the engine refuses an
+  // Svg over 131072 characters, and a refused band draws nothing.
+  const cellX = Math.max(CELL, Math.ceil(BAR_W / 200))
+  const cols = Math.floor(fillW / cellX)
   const rows = Math.floor(BAR_H / CELL)
 
   // Dithered fill: sparse at the start, dense toward the head.
@@ -93,14 +96,14 @@ export const rowSvg = (b: Bar, W: number, isWorking: boolean): string => {
   for (let c = 0; c < cols; c++) {
     const density = 0.35 + 0.6 * Math.pow(c / Math.max(1, cols), 1.2)
     for (let r = 0; r < rows; r++) {
-      if (noise(c, r) < density) dots.push(`<rect class="t${Math.floor(noise(r, c) * 4)}" x="${c * CELL + 1}" y="${r * CELL + 1}" width="2" height="2"/>`)
+      if (noise(c, r) < density) dots.push(`<rect class="t${Math.floor(noise(r, c) * 4)}" x="${c * cellX + 1}" y="${r * CELL + 1}" width="2" height="2"/>`)
     }
   }
   // Under way, not yet done: a faint second layer.
   const faint: string[] = []
-  for (let c = cols; c < Math.floor(runW / CELL); c++) {
+  for (let c = cols; c < Math.floor(runW / cellX); c++) {
     for (let r = 0; r < rows; r++) {
-      if (noise(c + 7, r + 3) < 0.2) faint.push(`<rect class="t${Math.floor(noise(r + 5, c) * 4)}" x="${c * CELL + 1}" y="${r * CELL + 1}" width="1.7" height="1.7"/>`)
+      if (noise(c + 7, r + 3) < 0.2) faint.push(`<rect class="t${Math.floor(noise(r + 5, c) * 4)}" x="${c * cellX + 1}" y="${r * CELL + 1}" width="1.7" height="1.7"/>`)
     }
   }
   const ticks = b.ticks

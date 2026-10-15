@@ -127,3 +127,13 @@ test('×N counts running subagents and opens the panel', async ($, on) => {
   await ui.unmount()
   expect(panes().map(p => p.id)).toEqual([PANE])
 })
+
+test('a prompt the user did not send is not a new request', async ($, on) => {
+  world(on)
+  await todoWrite($, allDone)
+  await submit($, 'agent finished', { origin: { kind: 'task-notification' } })
+  await submit($, 'from a peer', { origin: { kind: 'peer' } })
+  expect(await band($, 'terminal')).toContain('Done')
+  await submit($, 'from my phone', { origin: { kind: 'bridge' } })
+  expect(await band($, 'terminal')).toBeNull()
+})

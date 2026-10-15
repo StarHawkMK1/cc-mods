@@ -41,6 +41,8 @@ import {
 import { STRINGS, langOf, type Lang } from './i18n'
 
 const PANE = 'work-band-agents'
+// Where a prompt the user sent comes from: the prompt box, Remote Control, an SDK host such as the desktop app.
+const USER_ORIGINS: ReadonlySet<unknown> = new Set(['composer', 'bridge', 'sdk'])
 
 // The engine lists a module's state from these literals: plugin and key stay spelled out.
 const work = atom({ plugin: 'work-band', key: 'work' } as const, blankWork())
@@ -97,10 +99,11 @@ async function applySkill($: EngineInterface, name: unknown, args: unknown): Pro
   }
 }
 
-// A file the main session wrote or edited.
+// A file the main session wrote or edited; one outside the project root never starts the build.
 async function applyFile($: EngineInterface, path: unknown, content?: unknown): Promise<void> {
+  const root = await $.session.root().catch(() => undefined)
   await update($, work, w => {
-    const flow = onWrite(w.flow, path, content)
+    const flow = onWrite(w.flow, path, content, root)
     return flow === w.flow ? w : { ...w, flow }
   })
 }
@@ -188,11 +191,19 @@ export const register: Register = (on, options) => {
     return result
   })
 
-  // A prompt typed while idle starts a new request; a slash command that runs a
-  // superpowers skill moves the flow; a prompt typed into a running turn does neither.
+  // A slash command typed for a superpowers skill moves the flow. Builds without
+  // `prompt.submit`'s `command` report it only here; with it, the second call is a no-op.
+  on('command.run', async ($, e, next) => {
+    if (skillStage(e.command)) await applySkill($, e.command, e.args)
+    return next(e)
+  })
+
+  // A prompt the user sent while idle starts a new request; a slash command that
+  // runs a superpowers skill moves the flow; a prompt typed into a running turn,
+  // or one the user did not send (a finished background task, a peer), does neither.
   on('prompt.submit', async ($, e, next) => {
     if (e.command) await applySkill($, e.command.name, e.command.args)
-    else if (e.turnId === undefined) {
+    else if (e.turnId === undefined && USER_ORIGINS.has(e.origin?.kind)) {
       const at = await $.clock.now()
       await update($, work, w => startRequest(w, at))
     }

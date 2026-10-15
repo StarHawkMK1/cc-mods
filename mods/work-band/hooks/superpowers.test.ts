@@ -131,3 +131,22 @@ test('a failed skill call changes nothing', async ($, on) => {
   await skill($, 'superpowers:brainstorming', 'Auth')
   expect(await band($, 'terminal')).toBeNull()
 })
+
+test('a typed slash command reaches the flow through command.run too', async ($, on) => {
+  world(on)
+  await ($.command.run as (e: unknown) => Promise<unknown>)({ command: 'superpowers:brainstorming', args: 'Typed topic' })
+  const shown = await band($, 'terminal')
+  expect(shown).toContain('Typed topic')
+  expect(shown).toContain('Brainstorm')
+})
+
+test('a write outside the project root does not start the build', async ($, on) => {
+  world(on)
+  on('session.root', () => ({ value: 'C:\\repo' }) as never)
+  await skill($, 'superpowers:brainstorming', 'Auth')
+  await write($, 'C:\\Users\\me\\AppData\\Local\\Temp\\claude\\scratchpad\\notes.md', 'n')
+  await write($, '/tmp/other.ts', 'x')
+  expect(await band($, 'terminal')).toContain('Brainstorm')
+  await write($, 'C:\\repo\\src\\app.ts', 'x')
+  expect(await band($, 'terminal')).toContain('Build')
+})
