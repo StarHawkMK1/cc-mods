@@ -1,0 +1,133 @@
+import { expect, mock, test } from 'claude-code/testing'
+
+import { BAND, PLUGIN, SURFACES, band, endTurn, skill, submit, todoWrite, world, write } from './test-world'
+
+const PLAN = [
+  '# Auth login Implementation Plan',
+  ...Array.from({ length: 7 }, (_, i) => `### Task ${i + 1}: Step ${i + 1}\n- [ ] do it`),
+].join('\n')
+
+const buildTodos = (done: number) =>
+  Array.from({ length: 7 }, (_, i) => ({
+    content: `Task ${i + 1}`,
+    status: i < done ? 'completed' : i === done ? 'in_progress' : 'pending',
+    activeForm: `Doing task ${i + 1}`,
+  }))
+
+for (const surface of SURFACES) {
+  test(`${surface}: a superpowers flow walks its stages`, async ($, on) => {
+    world(on)
+    await skill($, 'superpowers:brainstorming', 'Auth redesign\nwith details')
+    let shown = await band($, surface)
+    expect(shown).toContain('Auth redesign')
+    expect(shown).toContain('Brainstorm')
+    expect(shown).toContain('0%')
+
+    await write($, 'docs/superpowers/specs/2026-10-15-auth-design.md', '# Auth redesign 설계\n')
+    shown = await band($, surface)
+    expect(shown).toContain('Spec')
+    expect(shown).toContain('17%')
+
+    await skill($, 'superpowers:writing-plans', 'docs/superpowers/specs/2026-10-15-auth-design.md')
+    expect(await band($, surface)).toContain('33%')
+
+    await write($, 'docs/superpowers/plans/2026-10-15-auth.md', PLAN)
+    await skill($, 'superpowers:subagent-driven-development')
+    shown = await band($, surface)
+    expect(shown).toContain('Auth login')
+    expect(shown).toContain('Build 0/7')
+    expect(shown).toContain('50%')
+
+    await todoWrite($, buildTodos(3))
+    shown = await band($, surface)
+    expect(shown).toContain('Build 3/7')
+    expect(shown).toContain('57%')
+  })
+}
+
+test('a plan handed to the executing skill is read for its task count', async ($, on) => {
+  world(on, 1_000, { 'docs/superpowers/plans/2026-10-15-auth.md': PLAN })
+  await skill($, 'superpowers:executing-plans', 'docs/superpowers/plans/2026-10-15-auth.md')
+  expect(await band($, 'terminal')).toContain('Build 0/7')
+})
+
+test('an unreadable plan falls back to the to-do list', async ($, on) => {
+  world(on)
+  await skill($, 'superpowers:executing-plans', 'docs/superpowers/plans/missing.md')
+  await todoWrite($, buildTodos(2).slice(0, 4))
+  expect(await band($, 'terminal')).toContain('Build 2/4')
+})
+
+test('building without a plan: the first source file moves Brainstorm to Build', async ($, on) => {
+  world(on)
+  await skill($, 'superpowers:brainstorming', 'Small fix')
+  await write($, '.superpowers/brainstorm/screen.html', '<p>')
+  await write($, 'C:\\Users\\me\\.claude\\projects\\x\\memory\\note.md', 'n')
+  expect(await band($, 'terminal')).toContain('Brainstorm')
+  await write($, 'src/app.ts', 'x')
+  expect(await band($, 'terminal')).toContain('Build')
+})
+
+test('a subagent’s skills and files never move the flow', async ($, on) => {
+  world(on)
+  await skill($, 'superpowers:brainstorming', 'Auth')
+  await skill($, 'superpowers:finishing-a-development-branch', undefined, 'ag-1')
+  await write($, 'src/app.ts', 'x', 'ag-1')
+  expect(await band($, 'terminal')).toContain('Brainstorm')
+})
+
+test('stages only move forward; brainstorming starts afresh', async ($, on) => {
+  world(on)
+  await skill($, 'superpowers:subagent-driven-development')
+  await skill($, 'superpowers:writing-plans')
+  expect(await band($, 'terminal')).toContain('Build')
+  await skill($, 'superpowers:brainstorming', 'Next idea')
+  const shown = await band($, 'terminal')
+  expect(shown).toContain('Next idea')
+  expect(shown).toContain('Brainstorm')
+})
+
+test('a slash command starts the flow', async ($, on) => {
+  world(on)
+  await submit($, '/superpowers:brainstorming Auth', { command: { name: 'superpowers:brainstorming', args: 'Auth' } })
+  const shown = await band($, 'terminal')
+  expect(shown).toContain('Auth')
+  expect(shown).toContain('Brainstorm')
+})
+
+test('Finish ends with the turn, and the next request clears it', async ($, on) => {
+  world(on)
+  await skill($, 'superpowers:brainstorming', 'Auth')
+  await skill($, 'superpowers:finishing-a-development-branch')
+  expect(await band($, 'terminal')).toContain('Finish')
+  await endTurn($)
+  const shown = await band($, 'desktop')
+  expect(shown).toContain('Done')
+  expect(shown).toContain('100%')
+  await submit($, 'thanks')
+  expect(await band($, 'terminal')).toBeNull()
+})
+
+test('✕ ends the flow', async ($, on) => {
+  world(on)
+  await skill($, 'superpowers:brainstorming', 'Auth')
+  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND })
+  await ui.press({ key: 'work-band-dismiss' })
+  await ui.unmount()
+  expect(await band($, 'terminal')).toBeNull()
+})
+
+test('other skills change nothing', async ($, on) => {
+  world(on)
+  await skill($, 'superpowers:systematic-debugging')
+  expect(await band($, 'terminal')).toBeNull()
+})
+
+// Not `world`: a second mock of the same tool would race the first.
+test('a failed skill call changes nothing', async ($, on) => {
+  mock.clock(on)
+  on('ui.render', () => ({ type: 'engine' }) as never)
+  on('tool.call', { tool: 'Skill' }, () => ({ result: { success: false, commandName: 'x' } }) as never)
+  await skill($, 'superpowers:brainstorming', 'Auth')
+  expect(await band($, 'terminal')).toBeNull()
+})

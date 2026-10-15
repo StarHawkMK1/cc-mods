@@ -4,7 +4,22 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { AgentRun } from '../types'
 import { costOf, usageTokens, windowOf, type Usage } from './agents'
 import { ACCENT, CLAY, DONE, H, barText, rowSvg } from './draw'
-import { blankWork, cleanTodos, createTodo, listOf, pickBar, startRequest, updateTodo, withList, type TaskUpdateInput } from './flow'
+import {
+  advance,
+  blankWork,
+  cleanTodos,
+  createTodo,
+  listOf,
+  mdPathOf,
+  onWrite,
+  pickBar,
+  skillStage,
+  startRequest,
+  updateTodo,
+  withList,
+  withPlan,
+  type TaskUpdateInput,
+} from './flow'
 import { STRINGS, langOf, type Lang } from './i18n'
 
 const PANE = 'work-band-agents'
@@ -46,6 +61,30 @@ async function togglePane($: EngineInterface): Promise<boolean> {
   await update($, now, () => at)
   await $.ui.open({ id: PANE, title: tr().pane })
   return true
+}
+
+// A superpowers skill, called by the model or typed as a slash command, moves
+// the flow; an executing skill handed a plan path reads the plan's task count.
+async function applySkill($: EngineInterface, name: unknown, args: unknown): Promise<void> {
+  const stage = skillStage(name)
+  if (!stage) return
+  const w = await update($, work, prev => ({ ...prev, flow: advance(prev.flow, stage, args) }))
+  const path = mdPathOf(args)
+  if (stage !== 'build' || !w.flow || w.flow.planTasks || !path) return
+  try {
+    const md = await $.fs.read(path)
+    if (typeof md === 'string') await update($, work, prev => (prev.flow ? { ...prev, flow: withPlan(prev.flow, md) } : prev))
+  } catch {
+    // An unreadable plan: the to-do list counts the tasks.
+  }
+}
+
+// A file the main session wrote or edited.
+async function applyFile($: EngineInterface, path: unknown, content?: unknown): Promise<void> {
+  await update($, work, w => {
+    const flow = onWrite(w.flow, path, content)
+    return flow === w.flow ? w : { ...w, flow }
+  })
 }
 
 export const register: Register = (on, options) => {
@@ -96,10 +135,42 @@ export const register: Register = (on, options) => {
     return result
   })
 
-  // A prompt typed while idle starts a new request; a slash command or a prompt
-  // typed into a running turn does not.
+  // The main session's skills and files move the superpowers flow; a subagent's never do.
+  on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
+    const result = await next(e)
+    if (e.agentId || !isAnswered(result)) return result
+    const input = e as unknown as { skill?: unknown; args?: unknown }
+    await applySkill($, input.skill, input.args)
+    return result
+  })
+
+  on('tool.call', { tool: 'Write' }, async ($, e, next) => {
+    const result = await next(e)
+    if (e.agentId || !isAnswered(result)) return result
+    const input = e as unknown as { file_path?: unknown; content?: unknown }
+    await applyFile($, input.file_path, input.content)
+    return result
+  })
+
+  on('tool.call', { tool: 'Edit' }, async ($, e, next) => {
+    const result = await next(e)
+    if (e.agentId || !isAnswered(result)) return result
+    await applyFile($, (e as unknown as { file_path?: unknown }).file_path)
+    return result
+  })
+
+  on('tool.call', { tool: 'NotebookEdit' }, async ($, e, next) => {
+    const result = await next(e)
+    if (e.agentId || !isAnswered(result)) return result
+    await applyFile($, (e as unknown as { notebook_path?: unknown }).notebook_path)
+    return result
+  })
+
+  // A prompt typed while idle starts a new request; a slash command that runs a
+  // superpowers skill moves the flow; a prompt typed into a running turn does neither.
   on('prompt.submit', async ($, e, next) => {
-    if (!e.command && e.turnId === undefined) {
+    if (e.command) await applySkill($, e.command.name, e.command.args)
+    else if (e.turnId === undefined) {
       const at = await $.clock.now()
       await update($, work, w => startRequest(w, at))
     }
@@ -184,6 +255,9 @@ export const register: Register = (on, options) => {
         const { [agentId]: _gone, ...rest } = w.agentTodos
         return { ...w, agentTodos: rest }
       })
+    } else {
+      // The main turn that ran the finishing skill closes the flow.
+      await update($, work, w => (w.flow?.stage === 'finish' && !w.flow.isFinished ? { ...w, flow: { ...w.flow, isFinished: true } } : w))
     }
     return next(e)
   })
