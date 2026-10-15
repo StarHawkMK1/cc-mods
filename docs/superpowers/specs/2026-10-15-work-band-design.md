@@ -66,7 +66,7 @@
 | 신호 | 잡는 곳 |
 |---|---|
 | 모델이 부른 스킬 | `tool.call` `{ tool: 'Skill' }`에서 `e.agentId`가 없을 때의 `e.skill`, `e.args` |
-| 사용자가 슬래시로 부른 스킬 | `prompt.submit`의 `e.command.name`, `e.command.args` |
+| 사용자가 슬래시로 부른 스킬 | `command.run`의 `e.command`, `e.args`. 2.1.299 이후 빌드는 `prompt.submit`의 `e.command`로도 알려 주며, 두 번 와도 결과는 같다 |
 | 파일 쓰기 | `tool.call` `{ tool: 'Write' }`, `Edit`, `NotebookEdit`에서 `e.agentId`가 없을 때의 `e.file_path`, (`Write`면) `e.content` |
 | 턴 끝 | `turn.complete`에서 `e.agentId`가 없을 때 |
 
@@ -134,7 +134,7 @@ Build의 작업 수:
 
 ## 7. 언제 사라지나
 
-**새 요청**은 실행 중인 턴이 없을 때 사용자가 보낸 프롬프트다(`prompt.submit`에서 `e.turnId`가 없음). 슬래시 커맨드는 새 요청으로 치지 않지만, superpowers 스킬을 부르는 슬래시 커맨드는 §5.1의 신호로 쓴다.
+**새 요청**은 실행 중인 턴이 없을 때 사용자가 보낸 프롬프트다(`prompt.submit`에서 `e.turnId`가 없고, `e.origin.kind`가 `composer`·`bridge`·`sdk`). 끝난 백그라운드 작업 알림이나 다른 세션의 메시지는 새 요청이 아니다. 슬래시 커맨드는 새 요청으로 치지 않지만, superpowers 스킬을 부르는 슬래시 커맨드는 §5.1의 신호로 쓴다.
 
 | 상황 | superpowers 흐름 | 하네스 막대 |
 |---|---|---|
