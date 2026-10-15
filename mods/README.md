@@ -7,6 +7,7 @@
 | [`blast-radius`](blast-radius/) | `blast-radius@cc-mods` | Anthropic 샘플 (claude-code-playground) |
 | [`replay-theater`](replay-theater/) | `replay-theater@cc-mods` | Anthropic 샘플 (claude-code-playground) |
 | [`token-weather`](token-weather/) | `token-weather@cc-mods` | Anthropic 샘플 (claude-code-playground) |
+| [`work-band`](work-band/) | `work-band@cc-mods` | 직접 작성 (johnnyvizz/claude-kit savvy-progress 일부 차용, MIT) |
 
 ## Anthropic 샘플 mod의 README에 대해
 

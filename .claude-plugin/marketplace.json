@@ -19,6 +19,11 @@
       "name": "token-weather",
       "source": "./mods/token-weather",
       "description": "A live forecast of the context window, drawn above the prompt."
+    },
+    {
+      "name": "work-band",
+      "source": "./mods/work-band",
+      "description": "A one-line band above the prompt: the superpowers stage or Claude's to-do progress, and how many subagents are running."
     }
   ]
 }

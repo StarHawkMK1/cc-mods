@@ -14,4 +14,15 @@
 | `mods/replay-theater/` | `claude-code/mods/replay-theater/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 수정 없음 |
 | `mods/token-weather/` | `claude-code/mods/token-weather/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 수정 없음 |
 
+## johnnyvizz/claude-kit
+
+- 저장소: https://github.com/johnnyvizz/claude-kit
+- 라이선스: MIT License, Copyright (c) 2026 johnnyvizz (원문: [`licenses/MIT-johnnyvizz-claude-kit.txt`](licenses/MIT-johnnyvizz-claude-kit.txt))
+
+| 이 저장소 경로 | upstream 경로 | upstream 커밋 | 내용 |
+| --- | --- | --- | --- |
+| `mods/work-band/hooks/draw.ts` | `plugins/savvy-progress/hooks/register.tsx` | `c871c153ead54ad9547cc717d0f3e5a676c73986` | 점묘 막대, 크랩, 글자 폭 계산, 패널 행 SVG를 차용해 수정 (등급·의상·RTL 제거, 막대 입력을 단계/할 일 기준으로 변경) |
+| `mods/work-band/hooks/agents.ts` | `plugins/savvy-progress/hooks/register.tsx` | `c871c153ead54ad9547cc717d0f3e5a676c73986` | 가격표, 비용·컨텍스트 계산, 모델 이름과 포맷 함수를 차용 |
+| `mods/work-band/hooks/work-band.tsx` | `plugins/savvy-progress/hooks/register.tsx` | `c871c153ead54ad9547cc717d0f3e5a676c73986` | 서브에이전트 수집 훅(`agent.spawn`, `turn.step`, `turn.complete`)과 패널 렌더 구조를 차용해 수정 |
+
 복사한 mod를 수정하면 "수정 여부" 칸에 변경 내용을 한 줄로 적고, 그 mod의 `.claude-plugin/plugin.json` `version`을 올립니다.
