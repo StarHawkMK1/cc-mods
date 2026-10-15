@@ -291,9 +291,12 @@ export const register: Register = (on, options) => {
         return { ...w, agentTodos: rest }
       })
     } else {
-      // The main turn that ran the finishing skill closes the flow, if it answered.
+      // The finishing skill ends its turn asking merge / PR / keep; the main turn
+      // that carries out the user's reply closes the flow, if it answered.
       if (e.reason === 'answer') {
-        await update($, work, w => (w.flow?.stage === 'finish' && !w.flow.isFinished ? { ...w, flow: { ...w.flow, isFinished: true } } : w))
+        await update($, work, w =>
+          w.flow?.stage === 'finish' && w.flow.hasReply && !w.flow.isFinished ? { ...w, flow: { ...w.flow, isFinished: true } } : w,
+        )
       }
     }
     return next(e)

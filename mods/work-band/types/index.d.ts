@@ -22,6 +22,8 @@ export type Flow = {
   planTitle?: string
   /** The plan's `### Task` headings. */
   planTasks?: number
+  /** In Finish, the user has replied to the finishing skill's question: the next main turn ends the flow. */
+  hasReply?: boolean
 }
 
 export type Work = {

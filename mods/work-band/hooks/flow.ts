@@ -80,9 +80,10 @@ export const stepsOf = (todos: Todo[]): Steps | null =>
 // Requests: a prompt typed while idle.
 
 // A finished flow and a finished list go; the subagents shown are counted from now.
+// In Finish, the request is the reply to the finishing skill's question.
 export const startRequest = (w: Work, at: number): Work => ({
   ...w,
-  flow: w.flow?.isFinished ? null : w.flow,
+  flow: w.flow?.isFinished ? null : w.flow?.stage === 'finish' ? { ...w.flow, hasReply: true } : w.flow,
   todos: w.todos.every(t => t.status === 'completed') ? [] : w.todos,
   since: at,
 })

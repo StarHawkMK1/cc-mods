@@ -95,11 +95,18 @@ test('a slash command starts the flow', async ($, on) => {
   expect(shown).toContain('Brainstorm')
 })
 
-test('Finish ends with the turn, and the next request clears it', async ($, on) => {
+test('Finish waits for the reply to its question, then ends with the turn that carries it out', async ($, on) => {
   world(on)
   await skill($, 'superpowers:brainstorming', 'Auth')
   await skill($, 'superpowers:finishing-a-development-branch')
   expect(await band($, 'terminal')).toContain('Finish')
+  // The finishing skill ends its turn asking merge / PR / keep: not done yet.
+  await endTurn($)
+  expect(await band($, 'terminal')).not.toContain('Done')
+  // The reply is a new request, and it keeps the flow.
+  await submit($, '1')
+  expect(await band($, 'terminal')).toContain('Finish')
+  // The turn that carries out the reply ends the flow.
   await endTurn($)
   const shown = await band($, 'desktop')
   expect(shown).toContain('Done')
