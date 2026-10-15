@@ -169,7 +169,7 @@ savvy의 에이전트 패널을 차용한다.
 4. superpowers: `brainstorming` → spec 파일 쓰기 → `writing-plans` → plan 파일 쓰기(작업 7개) → `subagent-driven-development` → 할 일 3개 완료 순으로 알약 `Brainstorm`, `Spec`, `Plan`, `Build 3/7`과 비율, 제목(plan 제목)을 확인.
 5. superpowers: Brainstorm 단계에서 `docs/superpowers/` 밖의 파일을 쓰면 Build. 서브에이전트의 스킬 호출은 단계를 바꾸지 않는다. 앞 단계 신호는 무시.
 6. superpowers: 사용자의 슬래시 `/superpowers:brainstorming`이 흐름을 시작한다.
-7. superpowers: Finish 단계에서 메인 턴이 끝나면 `Done`, 다음 새 요청에서 사라진다.
+7. superpowers: Finish 단계에서 질문으로 끝난 턴은 `Done`이 아니고, 사용자가 답한 뒤 그 턴이 끝나면 `Done`, 다음 새 요청에서 사라진다.
 8. 새 요청 규칙: 끝난 하네스 목록은 지우고 진행 중 목록은 유지. 실행 중인 턴에 끼어든 프롬프트는 지우지 않는다.
 9. ✕: 흐름은 지우고, 하네스 막대는 새 데이터가 올 때까지 숨긴다.
 10. ×N: 실행 중 수만 세고, 0이면 버튼이 없다. 누르면 패널이 열린다.
