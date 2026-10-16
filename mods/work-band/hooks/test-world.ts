@@ -45,6 +45,7 @@ export function world(on: On, now = 1_000, files: Record<string, string> = {}) {
   on('skill.prompt', (_$, e) => ({ text: (e as { text?: string }).text ?? '' }) as never)
   on('agent.spawn', (_$, e) => ({ model: 'claude-opus-5-5', agentId: `ag-${e.tool_use_id}` }) as never)
   on('turn.complete', () => ({ text: '' }) as never)
+  on('classic.SessionStart', () => ({}) as never)
   return {
     clock,
     panes: () => panes,

@@ -53,6 +53,8 @@ export type Work = {
   pendingSlash?: SlashCandidate
   test?: TestResult
   skill?: SkillRun
+  /** This state was rebuilt from the transcript, or tried to be: never twice. */
+  isReplayed?: boolean
 }
 
 export type AgentStatus = 'running' | 'done' | 'failed'

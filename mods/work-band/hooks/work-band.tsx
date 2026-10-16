@@ -24,6 +24,7 @@ import {
 import { MAX_TEXT, blankWork, clip, clockMs, isClockLive, listOf, mdPathOf, pickBar, skillStage, stepsOf, withPlan, type TaskUpdateInput } from './flow'
 import { confirmSlash, onAgentEnd, onAgentStart, onDismiss, onFile, onMainTurnEnd, onRequest, onSkill, onSlash, onTaskCreate, onTaskUpdate, onTest, onTodoWrite } from './events'
 import { STRINGS, langOf, type Lang } from './i18n'
+import { replay } from './replay'
 import { parseList, testVerdict, type BashAnswer, type BashCall } from './tests'
 
 const PANE = 'work-band-agents'
@@ -94,6 +95,28 @@ async function applyFile($: EngineInterface, path: unknown, content?: unknown): 
   await update($, work, w => onFile(w, path, content, root))
 }
 
+// A resumed or branched session starts with empty state: rebuild what outlives
+// a request from the transcript, once. Live work already there stands, and so
+// does anything written while the transcript was read.
+async function restore($: EngineInterface, skills: readonly string[], tests: readonly string[]): Promise<void> {
+  const held = await $.state.get({ plugin: 'work-band', key: 'work' })
+  const w0 = held.value ?? blankWork()
+  if (w0.isReplayed) return
+  const marked = await $.state.set({ plugin: 'work-band', key: 'work' }, { ...w0, isReplayed: true }, { ifVersion: held.version })
+  if (!marked.isSet || w0.flow || w0.todos.length) return
+  try {
+    const messages = await $.session.messages()
+    const root = await $.session.root().catch(() => undefined)
+    const at = await $.clock.now()
+    const { work: restored, planPath } = replay(messages, { root, skills, tests, at })
+    if (!restored.flow && !restored.todos.length) return
+    const wrote = await $.state.set({ plugin: 'work-band', key: 'work' }, restored, { ifVersion: marked.version })
+    if (wrote.isSet && planPath) await readPlan($, planPath)
+  } catch {
+    // No transcript to read: the band waits for live events.
+  }
+}
+
 export const register: Register = (on, options) => {
   // More command prefixes that count as a test run, from the plugin's settings.
   const testCommands = parseList(options.testCommands)
@@ -117,7 +140,16 @@ export const register: Register = (on, options) => {
         await update($, now, () => at)
       })()
     })
+    // `claude --resume` or `--continue`: the transcript is already there.
+    await restore($, skills, testCommands)
     return started
+  })
+
+  // /resume and /branch inside a session clear the state and do not run session.start again.
+  on('classic.SessionStart', async ($, e, next) => {
+    const result = await next(e)
+    if (e.source === 'resume' || e.source === 'fork') await restore($, skills, testCommands)
+    return result
   })
 
   // To-do lists, the main session's and each subagent's, read as they are written.
