@@ -1,7 +1,7 @@
 # work-band 설계
 
 - 작성일: 2026-10-15
-- 상태: 사용자 검토 대기
+- 상태: 구현 완료 (2026-10-16). 구현은 `mods/work-band`
 - 대체: `2026-10-15-savvy-progress-auto-bar-design.md` (savvy-progress 확장안, 폐기)
 - 기준 환경: Claude Code 2.1.299~2.1.300, Windows 11, Git Bash
 
