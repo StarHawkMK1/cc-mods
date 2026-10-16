@@ -38,12 +38,21 @@ export function world(on: On, now = 1_000, files: Record<string, string> = {}) {
   on('tool.call', { tool: 'Skill' }, (_$, e) => ({ result: { success: true, commandName: (e as { skill: string }).skill } }) as never)
   on('tool.call', { tool: 'Write' }, () => ({ result: {} }) as never)
   on('tool.call', { tool: 'Edit' }, () => ({ result: {} }) as never)
+  let bashAnswers: Record<string, unknown> = {}
+  on('tool.call', { tool: 'Bash' }, (_$, e) => (bashAnswers[(e as { command: string }).command] ?? { result: { stdout: '', stderr: '', interrupted: false } }) as never)
   on('prompt.submit', (_$, e) => ({ text: e.text }) as never)
   on('command.run', () => ({ text: '' }) as never)
   on('skill.prompt', (_$, e) => ({ text: (e as { text?: string }).text ?? '' }) as never)
   on('agent.spawn', (_$, e) => ({ model: 'claude-opus-5-5', agentId: `ag-${e.tool_use_id}` }) as never)
   on('turn.complete', () => ({ text: '' }) as never)
-  return { clock, panes: () => panes }
+  return {
+    clock,
+    panes: () => panes,
+    // What the Bash tool answers for that command from now on.
+    answerBash: (command: string, answer: unknown) => {
+      bashAnswers = { ...bashAnswers, [command]: answer }
+    },
+  }
 }
 
 // The band above the prompt as text: the terminal's Text runs joined, or the
@@ -73,6 +82,8 @@ export const skill = ($: Engine, name: string, args?: string, agentId?: string) 
   $.tool.call({ tool: 'Skill', skill: name, ...(args ? { args } : {}), ...by(agentId) } as never)
 export const write = ($: Engine, file_path: string, content = '', agentId?: string) =>
   $.tool.call({ tool: 'Write', file_path, content, ...by(agentId) } as never)
+export const bash = ($: Engine, command: string, agentId?: string, extra: Record<string, unknown> = {}) =>
+  $.tool.call({ tool: 'Bash', command, ...extra, ...by(agentId) } as never)
 export const spawn = ($: Engine, id: string, description = `Job ${id}`) =>
   $.agent.spawn({
     tool_use_id: id,

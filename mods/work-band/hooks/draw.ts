@@ -14,6 +14,8 @@ const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI','Malgun 
 export const ACCENT = '#8f8cf4'
 export const DONE = '#5fbf8f'
 export const CLAY = '#D97757'
+export const PASS = '#3B9C5F'
+export const FAIL = '#D0453F'
 const INK = '#1F1E1D'
 
 export const xml = (s: string): string =>
@@ -76,7 +78,7 @@ export const crab = (x: number, y: number, isWalking: boolean, scale = CRAB_SCAL
 }
 
 // What sits between the percent and the crab, laid out right to left.
-export type Tail = { time?: string; isLive?: boolean }
+export type Tail = { time?: string; isLive?: boolean; test?: { isPass: boolean; word: string } }
 const TAIL_FONT = 12
 
 // The tail's SVG, ending at `right`, and the width it takes with its gap.
@@ -88,6 +90,7 @@ export const tailSvg = (tail: Tail, right: number): { svg: string; width: number
     x -= Math.round(textWidth(text, TAIL_FONT)) + 10
   }
   if (tail.time) put(tail.time, `class="m"${tail.isLive ? ' opacity="0.6"' : ''}`)
+  if (tail.test) put(`${tail.test.isPass ? '✓' : '✗'} ${tail.test.word}`, `fill="${tail.test.isPass ? PASS : FAIL}" font-weight="600"`)
   return { svg: parts.join(''), width: right - x }
 }
 
@@ -201,8 +204,8 @@ const svg = (W: number, h: number, body: string): string =>
 
 const statusMark = (x: number, y: number, status: string): string => {
   if (status === 'running') return `<circle class="live" cx="${x}" cy="${y}" r="3.5" fill="${ACCENT}"/>`
-  if (status === 'done') return `<path d="M${x - 5} ${y}l3.5 3.5 6.5-7" fill="none" stroke="#3B9C5F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
-  return `<path d="M${x - 4} ${y - 4}l8 8M${x + 4} ${y - 4}l-8 8" stroke="#D0453F" stroke-width="1.8" stroke-linecap="round"/>`
+  if (status === 'done') return `<path d="M${x - 5} ${y}l3.5 3.5 6.5-7" fill="none" stroke="${PASS}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
+  return `<path d="M${x - 4} ${y - 4}l8 8M${x + 4} ${y - 4}l-8 8" stroke="${FAIL}" stroke-width="1.8" stroke-linecap="round"/>`
 }
 
 type Totals = { cost: number; tokens: number; time: number }

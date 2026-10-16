@@ -32,6 +32,9 @@ export type Clock = { from: number; to?: number }
 /** A slash command the user sent, waiting for `skill.prompt` to say it is a skill. */
 export type SlashCandidate = { name: string; args: string; isIdle: boolean }
 
+/** The last test run that finished in the foreground, the main session's or a subagent's. */
+export type TestResult = { isPass: boolean; at: number }
+
 export type Work = {
   flow: Flow | null
   /** The main session's to-do list. */
@@ -45,6 +48,7 @@ export type Work = {
   /** Set by a new request; absent after a replay until the next one. */
   clock?: Clock
   pendingSlash?: SlashCandidate
+  test?: TestResult
 }
 
 export type AgentStatus = 'running' | 'done' | 'failed'

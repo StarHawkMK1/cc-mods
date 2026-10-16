@@ -5,9 +5,14 @@ import { advance, cleanTodos, createTodo, listOf, onWrite, skillStage, startRequ
 // resumed session's transcript fold the same functions, so each rule lives once.
 
 // A superpowers stage skill moves the flow; any other skill changes nothing.
+// A new flow starts without the last one's test result.
 export const onSkill = (w: Work, name: unknown, args: unknown): Work => {
   const stage = skillStage(name)
-  return stage ? { ...w, flow: advance(w.flow, stage, args) } : w
+  if (!stage) return w
+  const flow = advance(w.flow, stage, args)
+  if (stage !== 'brainstorm' && w.flow && !w.flow.isFinished) return { ...w, flow }
+  const { test: _old, ...rest } = w
+  return { ...rest, flow }
 }
 
 // A file the main session wrote or edited (`content` is Write's).
@@ -29,10 +34,12 @@ export const onTaskUpdate = (w: Work, agentId: string | undefined, input: TaskUp
 }
 
 // A prompt the user sent while idle: 0.1's rules, the request's clock starts,
-// and a slash command still waiting is stale.
+// and a slash command still waiting is stale. The last test result stays with
+// a flow still under way, across its requests.
 export const onRequest = (w: Work, at: number): Work => {
-  const { pendingSlash: _stale, ...rest } = startRequest(w, at)
-  return { ...rest, clock: { from: at } }
+  const { pendingSlash: _stale, test, ...rest } = startRequest(w, at)
+  const keepsTest = !!rest.flow && !rest.flow.isFinished
+  return { ...rest, clock: { from: at }, ...(keepsTest && test ? { test } : {}) }
 }
 
 // The main turn ended at `at`: the request's clock stops there if it still ran.
@@ -47,8 +54,14 @@ export const onMainTurnEnd = (w: Work, at: number, isAnswer: boolean): Work => {
   return { ...rest, flow, ...(clock ? { clock } : {}), ...(pendingSlash && !pendingSlash.isIdle ? { pendingSlash } : {}) }
 }
 
-// ✕: the flow's band ends the flow; the harness band hides until new data.
-export const onDismiss = (w: Work, isFlow: boolean): Work => (isFlow ? { ...w, flow: null, isHidden: true } : { ...w, isHidden: true })
+// ✕: the flow's band ends the flow; the harness band hides until new data. The test result goes either way.
+export const onDismiss = (w: Work, isFlow: boolean): Work => {
+  const { test: _gone, ...rest } = w
+  return isFlow ? { ...rest, flow: null, isHidden: true } : { ...rest, isHidden: true }
+}
+
+// A test run finished: the chip shows it.
+export const onTest = (w: Work, isPass: boolean, at: number): Work => ({ ...w, test: { isPass, at } })
 
 // A new subagent brings a dismissed band back.
 export const onAgentStart = (w: Work): Work => (w.isHidden ? { ...w, isHidden: false } : w)

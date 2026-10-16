@@ -73,3 +73,13 @@ test('rowSvg puts the time before the crab, faint while it runs', () => {
   expect(rowSvg(bar(), 800, true, { time: '2:13' })).not.toContain('opacity="0.6"')
   expect(rowSvg(bar(), 800, true)).not.toContain('2:13')
 })
+
+test('rowSvg draws the test chip red or green', () => {
+  const fail = rowSvg(bar(), 800, false, { time: '0:13', test: { isPass: false, word: 'tests' } })
+  expect(fail).toContain('#D0453F')
+  expect(fail).toContain('>✗ tests</text>')
+  expect(fail).toContain('>0:13</text>')
+  const pass = rowSvg(bar(), 800, false, { test: { isPass: true, word: '테스트' } })
+  expect(pass).toContain('#3B9C5F')
+  expect(pass).toContain('>✓ 테스트</text>')
+})

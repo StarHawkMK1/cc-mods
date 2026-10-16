@@ -22,8 +22,9 @@ import {
   rowSvg,
 } from './draw'
 import { MAX_TEXT, blankWork, clip, clockMs, isClockLive, listOf, mdPathOf, pickBar, skillStage, stepsOf, withPlan, type TaskUpdateInput } from './flow'
-import { confirmSlash, onAgentEnd, onAgentStart, onDismiss, onFile, onMainTurnEnd, onRequest, onSkill, onSlash, onTaskCreate, onTaskUpdate, onTodoWrite } from './events'
+import { confirmSlash, onAgentEnd, onAgentStart, onDismiss, onFile, onMainTurnEnd, onRequest, onSkill, onSlash, onTaskCreate, onTaskUpdate, onTest, onTodoWrite } from './events'
 import { STRINGS, langOf, type Lang } from './i18n'
+import { parseList, testVerdict, type BashAnswer, type BashCall } from './tests'
 
 const PANE = 'work-band-agents'
 // Where a prompt the user sent comes from: the prompt box, Remote Control, an SDK host such as the desktop app.
@@ -93,6 +94,9 @@ async function applyFile($: EngineInterface, path: unknown, content?: unknown): 
 }
 
 export const register: Register = (on, options) => {
+  // More command prefixes that count as a test run, from the plugin's settings.
+  const testCommands = parseList(options.testCommands)
+
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     lang = await detectLang($, options.language)
@@ -165,6 +169,17 @@ export const register: Register = (on, options) => {
     const result = await next(e)
     if (e.agentId || !isAnswered(result)) return result
     await applyFile($, (e as unknown as { notebook_path?: unknown }).notebook_path)
+    return result
+  })
+
+  // A test run, the main session's or a subagent's: the chip shows how the last one went.
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    const result = await next(e)
+    const verdict = testVerdict(e as unknown as BashCall, result as BashAnswer, testCommands)
+    if (verdict) {
+      const at = await $.clock.now()
+      await update($, work, w => onTest(w, verdict === 'pass', at))
+    }
     return result
   })
 
@@ -301,6 +316,7 @@ export const register: Register = (on, options) => {
     await read($, now)
     const ms = clockMs(w, await $.clock.now())
     const isLive = isClockLive(w)
+    const chip = w.test ? { isPass: w.test.isPass, text: `${w.test.isPass ? '✓' : '✗'} ${s.tests}` } : null
     // Draw this row with the other mods' bands beneath it. Claude Code's own
     // placeholder ({ type: 'engine' }) is never nested: the desktop drops a band that nests it.
     const drawn = await Promise.resolve(next(e)).catch(() => null)
@@ -320,11 +336,11 @@ export const register: Register = (on, options) => {
       const width = Math.max(180, Math.min(1600, (e.props.bodyColumns || 100) * 8 - 96))
       // Too narrow for everything: the time goes first.
       const time = ms !== null && width >= 360 ? fmtTime(ms) : undefined
-      const alt = [bar.title, bar.pill, percent, time, bar.doing].filter(Boolean).join(' · ')
+      const alt = [bar.title, bar.pill, percent, chip?.text, time, bar.doing].filter(Boolean).join(' · ')
       return (
         <Box flexDirection="column">
           <Box flexDirection="row" alignItems="center" gap={1}>
-            <Svg source={rowSvg(bar, width, running > 0, { time, isLive })} alt={alt} width={width} height={H} />
+            <Svg source={rowSvg(bar, width, running > 0, { time, isLive, ...(chip ? { test: { isPass: chip.isPass, word: s.tests } } : {}) })} alt={alt} width={width} height={H} />
             {crew}
             {dismiss}
           </Box>
@@ -337,7 +353,7 @@ export const register: Register = (on, options) => {
     // Too narrow for everything: the time goes first.
     const time = ms !== null && cols >= 60 ? fmtTime(ms) : null
     const titleW = Math.max(8, Math.min(30, bar.title.length + 2, Math.floor(cols / 3)))
-    const width = Math.max(6, Math.min(40, cols - titleW - 32 - (time ? time.length + 2 : 0)))
+    const width = Math.max(6, Math.min(40, cols - titleW - 32 - (time ? time.length + 2 : 0) - (chip ? chip.text.length + 2 : 0)))
     const color = bar.isFinished ? DONE : ACCENT
     return (
       <Box flexDirection="column">
@@ -349,6 +365,7 @@ export const register: Register = (on, options) => {
           <Text color={color}>{barText(bar.ratio, width)}</Text>
           <Text bold>{bar.pill}</Text>
           <Text dimColor>{percent}</Text>
+          {chip && <Text color={chip.isPass ? 'green' : 'red'}>{chip.text}</Text>}
           {time && <Text dimColor={isLive}>{time}</Text>}
           <Text color={CLAY}>▣</Text>
           {crew}

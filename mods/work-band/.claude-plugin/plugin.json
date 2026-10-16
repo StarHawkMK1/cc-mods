@@ -13,6 +13,12 @@
       "description": "auto follows Claude Code's language setting, then the system locale; en or ko",
       "default": "auto",
       "options": ["auto", "en", "ko"]
+    },
+    "testCommands": {
+      "type": "string",
+      "title": "Test commands",
+      "description": "More command prefixes that count as a test run, comma-separated (for example: just test, ./run-tests.sh)",
+      "default": ""
     }
   },
   "license": "Apache-2.0"

@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Flow, Work } from '../types'
-import { confirmSlash, onAgentEnd, onAgentStart, onDismiss, onFile, onMainTurnEnd, onRequest, onSkill, onSlash, onTaskCreate, onTaskUpdate, onTodoWrite } from './events'
+import { confirmSlash, onAgentEnd, onAgentStart, onDismiss, onFile, onMainTurnEnd, onRequest, onSkill, onSlash, onTaskCreate, onTaskUpdate, onTest, onTodoWrite } from './events'
 import { blankWork } from './flow'
 
 const flow = (f: Partial<Flow> = {}): Flow => ({ stage: 'brainstorm', isFinished: false, ...f })
@@ -98,4 +98,17 @@ test('a turn’s end drops an idle slash command never expanded; a queued one wa
   expect(onMainTurnEnd(queued, 2, true).pendingSlash?.name).toBe('superpowers:brainstorming')
   expect(onRequest(queued, 2).pendingSlash).toBeUndefined()
   expect(onSlash(blankWork(), '  ', '', true)).toEqual(blankWork())
+})
+
+test('the test result stays with a flow under way, and goes with a new request, a new flow or ✕', () => {
+  const failed = (w: Work) => onTest(w, false, 3)
+  expect(failed(blankWork()).test).toEqual({ isPass: false, at: 3 })
+  expect(onRequest(failed(blankWork()), 5).test).toBeUndefined()
+  expect(onRequest(failed(withFlow({ stage: 'build' })), 5).test).toEqual({ isPass: false, at: 3 })
+  expect(onRequest(failed(withFlow({ stage: 'build', isFinished: true })), 5).test).toBeUndefined()
+  expect(onSkill(failed(withFlow({ stage: 'build' })), 'superpowers:requesting-code-review', '').test).toEqual({ isPass: false, at: 3 })
+  expect(onSkill(failed(withFlow({ stage: 'build' })), 'superpowers:brainstorming', 'Next').test).toBeUndefined()
+  expect(onSkill(failed(blankWork()), 'superpowers:executing-plans', '').test).toBeUndefined()
+  expect(onDismiss(failed(withFlow()), true).test).toBeUndefined()
+  expect(onDismiss(failed(blankWork()), false).test).toBeUndefined()
 })
