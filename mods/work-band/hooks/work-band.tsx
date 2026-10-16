@@ -21,25 +21,8 @@ import {
   headerSvg,
   rowSvg,
 } from './draw'
-import {
-  MAX_TEXT,
-  advance,
-  blankWork,
-  cleanTodos,
-  clip,
-  createTodo,
-  listOf,
-  mdPathOf,
-  onWrite,
-  pickBar,
-  skillStage,
-  startRequest,
-  stepsOf,
-  updateTodo,
-  withList,
-  withPlan,
-  type TaskUpdateInput,
-} from './flow'
+import { MAX_TEXT, blankWork, clip, listOf, mdPathOf, pickBar, skillStage, stepsOf, withPlan, type TaskUpdateInput } from './flow'
+import { onAgentEnd, onAgentStart, onDismiss, onFile, onMainTurnEnd, onRequest, onSkill, onTaskCreate, onTaskUpdate, onTodoWrite } from './events'
 import { STRINGS, langOf, type Lang } from './i18n'
 
 const PANE = 'work-band-agents'
@@ -85,14 +68,9 @@ async function togglePane($: EngineInterface): Promise<boolean> {
   return true
 }
 
-// A superpowers skill, called by the model or typed as a slash command, moves
-// the flow; an executing skill handed a plan path reads the plan's task count.
-async function applySkill($: EngineInterface, name: unknown, args: unknown): Promise<void> {
-  const stage = skillStage(name)
-  if (!stage) return
-  const w = await update($, work, prev => ({ ...prev, flow: advance(prev.flow, stage, args) }))
-  const path = mdPathOf(args)
-  if (stage !== 'build' || !w.flow || w.flow.planTasks || !path) return
+// Reads the plan an executing skill was handed, for its title and task count.
+async function readPlan($: EngineInterface, path: string | undefined): Promise<void> {
+  if (!path) return
   try {
     const md = await $.fs.read(path)
     if (typeof md === 'string') await update($, work, prev => (prev.flow ? { ...prev, flow: withPlan(prev.flow, md) } : prev))
@@ -101,13 +79,17 @@ async function applySkill($: EngineInterface, name: unknown, args: unknown): Pro
   }
 }
 
+// A superpowers skill, called by the model or typed as a slash command, moves
+// the flow; an executing skill handed a plan path reads the plan's task count.
+async function applySkill($: EngineInterface, name: unknown, args: unknown): Promise<void> {
+  const w = await update($, work, prev => onSkill(prev, name, args))
+  if (skillStage(name) === 'build' && w.flow && !w.flow.planTasks) await readPlan($, mdPathOf(args))
+}
+
 // A file the main session wrote or edited; one outside the project root never starts the build.
 async function applyFile($: EngineInterface, path: unknown, content?: unknown): Promise<void> {
   const root = await $.session.root().catch(() => undefined)
-  await update($, work, w => {
-    const flow = onWrite(w.flow, path, content, root)
-    return flow === w.flow ? w : { ...w, flow }
-  })
+  await update($, work, w => onFile(w, path, content, root))
 }
 
 export const register: Register = (on, options) => {
@@ -134,8 +116,7 @@ export const register: Register = (on, options) => {
   on('tool.call', { tool: 'TodoWrite' }, async ($, e, next) => {
     const result = await next(e)
     if (!isAnswered(result)) return result
-    const todos = cleanTodos((e as unknown as { todos?: unknown }).todos)
-    await update($, work, w => withList(w, e.agentId, todos))
+    await update($, work, w => onTodoWrite(w, e.agentId, (e as unknown as { todos?: unknown }).todos))
     return result
   })
 
@@ -144,21 +125,14 @@ export const register: Register = (on, options) => {
     if (!isAnswered(result)) return result
     const input = e as unknown as { subject?: unknown; activeForm?: unknown }
     const id = (result.result as { task?: { id?: unknown } } | undefined)?.task?.id
-    await update($, work, w => {
-      const todos = createTodo(listOf(w, e.agentId), id, input.subject, input.activeForm)
-      return todos ? withList(w, e.agentId, todos) : w
-    })
+    await update($, work, w => onTaskCreate(w, e.agentId, id, input.subject, input.activeForm))
     return result
   })
 
   on('tool.call', { tool: 'TaskUpdate' }, async ($, e, next) => {
     const result = await next(e)
     if (!isAnswered(result)) return result
-    const input = e as unknown as TaskUpdateInput
-    await update($, work, w => {
-      const todos = updateTodo(listOf(w, e.agentId), input)
-      return todos ? withList(w, e.agentId, todos) : w
-    })
+    await update($, work, w => onTaskUpdate(w, e.agentId, e as unknown as TaskUpdateInput))
     return result
   })
 
@@ -207,7 +181,7 @@ export const register: Register = (on, options) => {
     if (e.command) await applySkill($, e.command.name, e.command.args)
     else if (e.turnId === undefined && USER_ORIGINS.has(e.origin?.kind)) {
       const at = await $.clock.now()
-      await update($, work, w => startRequest(w, at))
+      await update($, work, w => onRequest(w, at))
     }
     return next(e)
   })
@@ -234,7 +208,7 @@ export const register: Register = (on, options) => {
       return [...list.filter(a => a.id !== run.id), run].slice(-200)
     })
     await update($, now, () => at)
-    await update($, work, w => (w.isHidden ? { ...w, isHidden: false } : w))
+    await update($, work, onAgentStart)
     return started
   })
 
@@ -284,20 +258,11 @@ export const register: Register = (on, options) => {
         }),
       )
       await update($, now, () => at)
-      // A finished run's own list is done with: the panel shows it full.
-      await update($, work, w => {
-        if (!Object.hasOwn(w.agentTodos, agentId)) return w
-        const { [agentId]: _gone, ...rest } = w.agentTodos
-        return { ...w, agentTodos: rest }
-      })
+      await update($, work, w => onAgentEnd(w, agentId))
     } else {
       // The finishing skill ends its turn asking merge / PR / keep; the main turn
       // that carries out the user's reply closes the flow, if it answered.
-      if (e.reason === 'answer') {
-        await update($, work, w =>
-          w.flow?.stage === 'finish' && w.flow.hasReply && !w.flow.isFinished ? { ...w, flow: { ...w.flow, isFinished: true } } : w,
-        )
-      }
+      await update($, work, w => onMainTurnEnd(w, e.reason === 'answer'))
     }
     return next(e)
   })
@@ -325,7 +290,7 @@ export const register: Register = (on, options) => {
         label="✕"
         plain
         role="dismiss"
-        onPress={() => update($, work, prev => (bar.isFlow ? { ...prev, flow: null, isHidden: true } : { ...prev, isHidden: true }))}
+        onPress={() => update($, work, prev => onDismiss(prev, bar.isFlow))}
       />
     )
 
