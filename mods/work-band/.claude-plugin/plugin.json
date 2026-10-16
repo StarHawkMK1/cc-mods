@@ -14,6 +14,12 @@
       "default": "auto",
       "options": ["auto", "en", "ko"]
     },
+    "skills": {
+      "type": "string",
+      "title": "Skills",
+      "description": "Skills the band shows besides superpowers', comma-separated: a full name (impeccable) or a plugin prefix (taste-skill:). Empty shows them all",
+      "default": ""
+    },
     "testCommands": {
       "type": "string",
       "title": "Test commands",

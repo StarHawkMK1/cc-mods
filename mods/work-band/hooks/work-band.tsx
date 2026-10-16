@@ -80,10 +80,11 @@ async function readPlan($: EngineInterface, path: string | undefined): Promise<v
   }
 }
 
-// A superpowers skill, called by the model or typed as a slash command, moves
-// the flow; an executing skill handed a plan path reads the plan's task count.
-async function applySkill($: EngineInterface, name: unknown, args: unknown): Promise<void> {
-  const w = await update($, work, prev => onSkill(prev, name, args))
+// A skill, called by the model or typed as a slash command: superpowers' move
+// the flow, another becomes the request's skill; an executing skill handed a
+// plan path reads the plan's task count.
+async function applySkill($: EngineInterface, name: unknown, args: unknown, skills: readonly string[]): Promise<void> {
+  const w = await update($, work, prev => onSkill(prev, name, args, skills))
   if (skillStage(name) === 'build' && w.flow && !w.flow.planTasks) await readPlan($, mdPathOf(args))
 }
 
@@ -96,6 +97,8 @@ async function applyFile($: EngineInterface, path: unknown, content?: unknown): 
 export const register: Register = (on, options) => {
   // More command prefixes that count as a test run, from the plugin's settings.
   const testCommands = parseList(options.testCommands)
+  // Which other skills the band shows, from the plugin's settings; empty shows all.
+  const skills = parseList(options.skills)
 
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -146,7 +149,7 @@ export const register: Register = (on, options) => {
     const result = await next(e)
     if (e.agentId || !isAnswered(result)) return result
     const input = e as unknown as { skill?: unknown; args?: unknown }
-    await applySkill($, input.skill, input.args)
+    await applySkill($, input.skill, input.args, skills)
     return result
   })
 
@@ -198,7 +201,7 @@ export const register: Register = (on, options) => {
     // An object, not a `let`: TypeScript does not see a write made inside the update callback.
     const box: { slash?: SlashCandidate } = {}
     await update($, work, w => {
-      const r = confirmSlash(w, e.skill, e.pluginName, at)
+      const r = confirmSlash(w, e.skill, e.pluginName, at, skills)
       box.slash = r.slash
       return r.work
     })
@@ -336,7 +339,7 @@ export const register: Register = (on, options) => {
       const width = Math.max(180, Math.min(1600, (e.props.bodyColumns || 100) * 8 - 96))
       // Too narrow for everything: the time goes first.
       const time = ms !== null && width >= 360 ? fmtTime(ms) : undefined
-      const alt = [bar.title, bar.pill, percent, chip?.text, time, bar.doing].filter(Boolean).join(' · ')
+      const alt = [bar.title, bar.pill, percent, chip?.text, time, bar.note, bar.doing].filter(Boolean).join(' · ')
       return (
         <Box flexDirection="column">
           <Box flexDirection="row" alignItems="center" gap={1}>

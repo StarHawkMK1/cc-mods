@@ -114,7 +114,7 @@ export const skillStage = (name: unknown): Stage | null => {
   return key && Object.hasOwn(SKILL_STAGE, key) ? (SKILL_STAGE[key] ?? null) : null
 }
 
-const firstLine = (s: unknown): string | undefined =>
+export const firstLine = (s: unknown): string | undefined =>
   typeof s === 'string' ? cleanText(s.split(/\r?\n/).find(l => l.trim())) : undefined
 
 // Brainstorming always starts a new flow; any other skill starts one when there
@@ -211,6 +211,8 @@ export type Bar = {
   isFlow: boolean
   /** What is in progress now, for the alt text. */
   doing: string
+  /** The skill's argument, for the alt text. */
+  note?: string
 }
 
 const doneCount = (todos: Todo[]): number => todos.filter(t => t.status === 'completed').length
@@ -274,9 +276,37 @@ export const agentsBar = (runs: AgentRun[], s: Strings): Bar | null => {
   }
 }
 
-// The flow when there is one; else, unless dismissed, the main list, else this request's subagents.
+// `x:x` (a plugin named after its one skill) reads `x`.
+export const skillLabel = (name: string): string => {
+  const parts = name.split(':')
+  return parts.length === 2 && parts[0] === parts[1] ? (parts[0] ?? name) : name
+}
+
+// The skills setting: empty shows all; `plugin:` matches a prefix; anything else the whole name. Case is ignored.
+export const isShownSkill = (name: string, skills: readonly string[]): boolean => {
+  const n = name.toLowerCase()
+  return !skills.length || skills.some(raw => {
+    const k = raw.toLowerCase()
+    return k.endsWith(':') ? n.startsWith(k) : n === k
+  })
+}
+
+// A skill's band: its name over the to-do list's progress, else the subagents',
+// else Running until the main turn ends.
+export const skillBar = (w: Work, runs: AgentRun[], s: Strings): Bar | null => {
+  if (!w.skill) return null
+  const title = skillLabel(w.skill.name)
+  const note = w.skill.args ? { note: w.skill.args } : {}
+  const base = todoBar(w.todos, s) ?? agentsBar(requestAgents(runs, w.since), s)
+  if (base) return { ...base, title, ...note }
+  const isFinished = w.clock?.to !== undefined
+  const ratio = isFinished ? 1 : 0
+  return { title, pill: isFinished ? s.done : s.running, ratio, runRatio: ratio, ticks: [], isFinished, isFlow: false, doing: '', ...note }
+}
+
+// The flow when there is one; else, unless dismissed, this request's skill, the main list, this request's subagents.
 export const pickBar = (w: Work, runs: AgentRun[], s: Strings): Bar | null => {
   if (w.flow) return flowBar(w.flow, w.todos, s)
   if (w.isHidden) return null
-  return todoBar(w.todos, s) ?? agentsBar(requestAgents(runs, w.since), s)
+  return skillBar(w, runs, s) ?? todoBar(w.todos, s) ?? agentsBar(requestAgents(runs, w.since), s)
 }

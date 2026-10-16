@@ -35,6 +35,9 @@ export type SlashCandidate = { name: string; args: string; isIdle: boolean }
 /** The last test run that finished in the foreground, the main session's or a subagent's. */
 export type TestResult = { isPass: boolean; at: number }
 
+/** A skill other than superpowers' that this request ran. */
+export type SkillRun = { name: string; args?: string }
+
 export type Work = {
   flow: Flow | null
   /** The main session's to-do list. */
@@ -49,6 +52,7 @@ export type Work = {
   clock?: Clock
   pendingSlash?: SlashCandidate
   test?: TestResult
+  skill?: SkillRun
 }
 
 export type AgentStatus = 'running' | 'done' | 'failed'

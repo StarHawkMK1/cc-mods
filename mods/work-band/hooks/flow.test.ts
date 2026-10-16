@@ -12,11 +12,14 @@ import {
   createTodo,
   flowBar,
   isClockLive,
+  isShownSkill,
   listOf,
   mdPathOf,
   onWrite,
   pickBar,
   requestAgents,
+  skillBar,
+  skillLabel,
   skillStage,
   startRequest,
   stepsOf,
@@ -219,4 +222,23 @@ test('clockMs runs to now, or to the turn’s end', () => {
   expect(isClockLive({ ...w, clock: { from: 1 } })).toBe(true)
   expect(isClockLive({ ...w, clock: { from: 1, to: 2 } })).toBe(false)
   expect(isClockLive(w)).toBe(false)
+})
+
+test('skill names, the skills setting and the skill band', () => {
+  expect(skillLabel('frontend-design:frontend-design')).toBe('frontend-design')
+  expect(skillLabel('docs-system:wrapup')).toBe('docs-system:wrapup')
+  expect(skillLabel('impeccable')).toBe('impeccable')
+  expect(isShownSkill('anything', [])).toBe(true)
+  expect(isShownSkill('taste-skill:minimalist-ui', ['taste-skill:'])).toBe(true)
+  expect(isShownSkill('impeccable', ['Impeccable'])).toBe(true)
+  expect(isShownSkill('impeccable-x', ['impeccable'])).toBe(false)
+
+  const w = { ...blankWork(), skill: { name: 'impeccable', args: 'polish' }, clock: { from: 1 } }
+  expect(skillBar(blankWork(), [], s)).toBeNull()
+  expect(skillBar(w, [], s)).toMatchObject({ title: 'impeccable', pill: 'Running', ratio: 0, isFinished: false, note: 'polish' })
+  expect(skillBar({ ...w, clock: { from: 1, to: 2 } }, [], s)).toMatchObject({ pill: 'Done', ratio: 1, isFinished: true })
+  expect(skillBar({ ...w, todos: [todo('1', 'completed'), todo('2', 'pending')] }, [], s)).toMatchObject({ title: 'impeccable', pill: 'Tasks 1/2' })
+  expect(pickBar({ ...w, flow: { stage: 'plan', isFinished: false } }, [], s)?.pill).toBe('Plan')
+  expect(pickBar({ ...w, isHidden: true }, [], s)).toBeNull()
+  expect(pickBar(w, [], STRINGS.ko)?.pill).toBe('실행 중')
 })

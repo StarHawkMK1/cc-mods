@@ -8,9 +8,9 @@ const flow = (f: Partial<Flow> = {}): Flow => ({ stage: 'brainstorm', isFinished
 const withFlow = (f: Partial<Flow> = {}): Work => ({ ...blankWork(), flow: flow(f) })
 
 test('onSkill moves the flow for a superpowers stage skill and leaves any other alone', () => {
-  expect(onSkill(blankWork(), 'superpowers:brainstorming', 'Auth\nmore').flow).toEqual({ stage: 'brainstorm', isFinished: false, topic: 'Auth' })
+  expect(onSkill(blankWork(), 'superpowers:brainstorming', 'Auth\nmore', []).flow).toEqual({ stage: 'brainstorm', isFinished: false, topic: 'Auth' })
   const w = blankWork()
-  expect(onSkill(w, 'superpowers:systematic-debugging', '')).toBe(w)
+  expect(onSkill(w, 'superpowers:systematic-debugging', '', [])).toBe(w)
 })
 
 test('onFile keeps the same object when the flow does not move', () => {
@@ -73,8 +73,8 @@ test('a slash command waits for skill.prompt; an idle one is a new request', () 
   expect(waiting.pendingSlash).toEqual({ name: 'superpowers:brainstorming', args: 'Auth', isIdle: true })
   // command.run after prompt.submit for the same command keeps the first.
   expect(onSlash(waiting, 'superpowers:brainstorming', 'other', false)).toBe(waiting)
-  expect(confirmSlash(waiting, 'impeccable', undefined, 5).work).toBe(waiting)
-  const { work: w, slash } = confirmSlash(waiting, 'brainstorming', 'superpowers', 5)
+  expect(confirmSlash(waiting, 'impeccable', undefined, 5, []).work).toBe(waiting)
+  const { work: w, slash } = confirmSlash(waiting, 'brainstorming', 'superpowers', 5, [])
   expect(slash?.name).toBe('superpowers:brainstorming')
   expect(w.pendingSlash).toBeUndefined()
   expect(w.todos).toEqual([])
@@ -83,10 +83,10 @@ test('a slash command waits for skill.prompt; an idle one is a new request', () 
 })
 
 test('a slash skill typed into a running turn is not a new request; an idle one in Finish is the reply', () => {
-  const busy = confirmSlash(onSlash(onRequest(blankWork(), 1), 'superpowers:brainstorming', '', false), 'superpowers:brainstorming', undefined, 5).work
+  const busy = confirmSlash(onSlash(onRequest(blankWork(), 1), 'superpowers:brainstorming', '', false), 'superpowers:brainstorming', undefined, 5, []).work
   expect(busy.clock).toEqual({ from: 1 })
   expect(busy.flow?.stage).toBe('brainstorm')
-  const reply = confirmSlash(onSlash(withFlow({ stage: 'finish' }), 'superpowers:systematic-debugging', '', true), 'superpowers:systematic-debugging', undefined, 5).work
+  const reply = confirmSlash(onSlash(withFlow({ stage: 'finish' }), 'superpowers:systematic-debugging', '', true), 'superpowers:systematic-debugging', undefined, 5, []).work
   expect(reply.flow?.hasReply).toBe(true)
 })
 
@@ -106,9 +106,26 @@ test('the test result stays with a flow under way, and goes with a new request, 
   expect(onRequest(failed(blankWork()), 5).test).toBeUndefined()
   expect(onRequest(failed(withFlow({ stage: 'build' })), 5).test).toEqual({ isPass: false, at: 3 })
   expect(onRequest(failed(withFlow({ stage: 'build', isFinished: true })), 5).test).toBeUndefined()
-  expect(onSkill(failed(withFlow({ stage: 'build' })), 'superpowers:requesting-code-review', '').test).toEqual({ isPass: false, at: 3 })
-  expect(onSkill(failed(withFlow({ stage: 'build' })), 'superpowers:brainstorming', 'Next').test).toBeUndefined()
-  expect(onSkill(failed(blankWork()), 'superpowers:executing-plans', '').test).toBeUndefined()
+  expect(onSkill(failed(withFlow({ stage: 'build' })), 'superpowers:requesting-code-review', '', []).test).toEqual({ isPass: false, at: 3 })
+  expect(onSkill(failed(withFlow({ stage: 'build' })), 'superpowers:brainstorming', 'Next', []).test).toBeUndefined()
+  expect(onSkill(failed(blankWork()), 'superpowers:executing-plans', '', []).test).toBeUndefined()
   expect(onDismiss(failed(withFlow()), true).test).toBeUndefined()
   expect(onDismiss(failed(blankWork()), false).test).toBeUndefined()
+})
+
+test('another skill is recorded for the request, if the setting lets it show', () => {
+  const w = onSkill(onDismiss(blankWork(), false), '/impeccable', 'polish the hero\nand more', [])
+  expect(w.skill).toEqual({ name: 'impeccable', args: 'polish the hero' })
+  expect(w.isHidden).toBe(false)
+  expect(onSkill(blankWork(), 'vault:vault-note', '', ['taste-skill:', 'impeccable']).skill).toBeUndefined()
+  expect(onSkill(blankWork(), 'Taste-Skill:minimalist-ui', '', ['taste-skill:']).skill?.name).toBe('Taste-Skill:minimalist-ui')
+  expect(onSkill(blankWork(), 'superpowers:systematic-debugging', '', []).skill).toBeUndefined()
+  expect(onRequest(onSkill(blankWork(), 'impeccable', '', []), 9).skill).toBeUndefined()
+})
+
+test('a confirmed slash skill is recorded after its request starts', () => {
+  const waiting = onSlash(onSkill(blankWork(), 'impeccable', 'old', []), '/docs-system:wrapup', '', true)
+  const { work } = confirmSlash(waiting, 'wrapup', 'docs-system', 4, [])
+  expect(work.skill).toEqual({ name: 'docs-system:wrapup' })
+  expect(work.clock).toEqual({ from: 4 })
 })

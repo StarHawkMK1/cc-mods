@@ -1,18 +1,24 @@
 import type { SlashCandidate, Work } from '../types'
-import { advance, cleanTodos, createTodo, listOf, onWrite, skillStage, startRequest, updateTodo, withList, type TaskUpdateInput } from './flow'
+import { advance, cleanTodos, createTodo, firstLine, isShownSkill, listOf, onWrite, skillStage, startRequest, updateTodo, withList, type TaskUpdateInput } from './flow'
 
 // How the work changes with each signal. The live hooks and the replay of a
 // resumed session's transcript fold the same functions, so each rule lives once.
 
-// A superpowers stage skill moves the flow; any other skill changes nothing.
-// A new flow starts without the last one's test result.
-export const onSkill = (w: Work, name: unknown, args: unknown): Work => {
+// A superpowers stage skill moves the flow; a new flow starts without the last
+// one's test result. Another skill (not superpowers', and one the `skills`
+// setting shows) becomes the request's skill and brings a dismissed band back.
+export const onSkill = (w: Work, name: unknown, args: unknown, skills: readonly string[]): Work => {
   const stage = skillStage(name)
-  if (!stage) return w
-  const flow = advance(w.flow, stage, args)
-  if (stage !== 'brainstorm' && w.flow && !w.flow.isFinished) return { ...w, flow }
-  const { test: _old, ...rest } = w
-  return { ...rest, flow }
+  if (stage) {
+    const flow = advance(w.flow, stage, args)
+    if (stage !== 'brainstorm' && w.flow && !w.flow.isFinished) return { ...w, flow }
+    const { test: _old, ...rest } = w
+    return { ...rest, flow }
+  }
+  const key = typeof name === 'string' ? name.trim().replace(/^\//, '') : ''
+  if (!key || /^superpowers:/i.test(key) || !isShownSkill(key, skills)) return w
+  const note = firstLine(args)
+  return { ...w, skill: note ? { name: key, args: note } : { name: key }, isHidden: false }
 }
 
 // A file the main session wrote or edited (`content` is Write's).
@@ -34,10 +40,10 @@ export const onTaskUpdate = (w: Work, agentId: string | undefined, input: TaskUp
 }
 
 // A prompt the user sent while idle: 0.1's rules, the request's clock starts,
-// and a slash command still waiting is stale. The last test result stays with
-// a flow still under way, across its requests.
+// and the last request's skill and a slash command still waiting go. The last
+// test result stays with a flow still under way, across its requests.
 export const onRequest = (w: Work, at: number): Work => {
-  const { pendingSlash: _stale, test, ...rest } = startRequest(w, at)
+  const { pendingSlash: _stale, skill: _skill, test, ...rest } = startRequest(w, at)
   const keepsTest = !!rest.flow && !rest.flow.isFinished
   return { ...rest, clock: { from: at }, ...(keepsTest && test ? { test } : {}) }
 }
@@ -97,10 +103,16 @@ const promptedKeys = (skill: unknown, pluginName: unknown): string[] => {
 // `skill.prompt` for the waiting slash command: it was a skill. An idle one is a
 // new request first, then the skill applies. Any other `skill.prompt` (the
 // model's Skill call, a subagent's) changes nothing here.
-export const confirmSlash = (w: Work, skill: unknown, pluginName: unknown, at: number): { work: Work; slash?: SlashCandidate } => {
+export const confirmSlash = (
+  w: Work,
+  skill: unknown,
+  pluginName: unknown,
+  at: number,
+  skills: readonly string[],
+): { work: Work; slash?: SlashCandidate } => {
   const c = w.pendingSlash
   if (!c || !promptedKeys(skill, pluginName).includes(keyOf(c.name))) return { work: w }
   const { pendingSlash: _done, ...rest } = w
   const base = c.isIdle ? onRequest(rest, at) : rest
-  return { work: onSkill(base, c.name, c.args), slash: c }
+  return { work: onSkill(base, c.name, c.args, skills), slash: c }
 }
