@@ -59,6 +59,29 @@ test('testVerdict trusts the exit code only when it is the test’s own', () => 
   expect(testVerdict({ command: 'bun test | tail -1' }, ok('', ' 2 fail'))).toBe('fail')
 })
 
+test('a newline or a background & ends a piece; a line continuation does not', () => {
+  expect(piecesOf('cd x\nnpm test').map(p => p.next)).toEqual(['\n', ''])
+  expect(piecesOf('npm test \\\n  --ci\n').length).toBe(1)
+  expect(piecesOf('npm test 2>&1 &> log >&2 |& cat').map(p => p.next)).toEqual(['|&', ''])
+  expect(piecesOf('npm test & echo hi').map(p => p.next)).toEqual(['&', ''])
+  expect(testVerdict({ command: 'npm test\necho done' }, ok(' 3 failed\ndone'))).toBe('fail')
+  expect(testVerdict({ command: 'npm test\necho done' }, ok('done'))).toBeNull()
+  expect(testVerdict({ command: 'npm test\r\necho done' }, ok('done'))).toBeNull()
+  expect(testVerdict({ command: 'cd x\nnpm test' }, err('Exit code 1'))).toBe('fail')
+  expect(testVerdict({ command: 'npm test \\\n  --ci' }, err('Exit code 1'))).toBe('fail')
+  expect(testVerdict({ command: 'npm test\n' }, err('Exit code 1'))).toBe('fail')
+  // A line ending in an operator goes on to the next.
+  expect(testVerdict({ command: 'npm test &&\necho done' }, err('Exit code 1'))).toBe('fail')
+  expect(testVerdict({ command: 'npm test &&\n  echo done' }, ok('done'))).toBe('pass')
+  expect(testVerdict({ command: 'cd x &&\nnpm test' }, err('Exit code 1'))).toBe('fail')
+  expect(testVerdict({ command: 'npm test |\ntail -1' }, ok(' 2 failed'))).toBe('fail')
+  expect(piecesOf('npm test 0<&3').length).toBe(1)
+  expect(testVerdict({ command: 'npm test &' }, ok())).toBeNull()
+  expect(testVerdict({ command: 'npm test & wait' }, ok(' 2 failed'))).toBe('fail')
+  expect(testVerdict({ command: 'npm test &> log' }, err('Exit code 1'))).toBe('fail')
+  expect(testVerdict({ command: 'npm test 2>&1' }, ok())).toBe('pass')
+})
+
 test('testVerdict leaves out what did not run to the end in the foreground', () => {
   expect(testVerdict({ command: 'npm test' }, { deny: 'no' })).toBeNull()
   expect(testVerdict({ command: 'npm test', run_in_background: true }, ok())).toBeNull()

@@ -129,3 +129,22 @@ test('a confirmed slash skill is recorded after its request starts', () => {
   expect(work.skill).toEqual({ name: 'docs-system:wrapup' })
   expect(work.clock).toEqual({ from: 4 })
 })
+
+test('a short slash name is confirmed with its plugin in front, whichever way skill.prompt spells it', () => {
+  const brainstorm = onSlash(blankWork(), '/brainstorming', 'Auth', true)
+  const byPlugin = confirmSlash(brainstorm, 'brainstorming', 'superpowers', 5, [])
+  expect(byPlugin.slash?.name).toBe('superpowers:brainstorming')
+  expect(byPlugin.work.flow).toMatchObject({ stage: 'brainstorm', topic: 'Auth' })
+  expect(byPlugin.work.skill).toBeUndefined()
+  const byQualified = confirmSlash(brainstorm, 'superpowers:brainstorming', undefined, 5, [])
+  expect(byQualified.slash?.name).toBe('superpowers:brainstorming')
+  expect(byQualified.work.flow?.stage).toBe('brainstorm')
+  const wrapup = onSlash(blankWork(), '/wrapup', '', true)
+  expect(confirmSlash(wrapup, 'wrapup', 'docs-system', 5, []).work.skill).toEqual({ name: 'docs-system:wrapup' })
+  expect(confirmSlash(wrapup, 'docs-system:wrapup', undefined, 5, []).work.skill).toEqual({ name: 'docs-system:wrapup' })
+  expect(confirmSlash(wrapup, 'wrapup', 'docs-system', 5, ['docs-system:']).work.skill?.name).toBe('docs-system:wrapup')
+  // Another plugin's skill of the same short name is not this one.
+  expect(confirmSlash(onSlash(blankWork(), '/vault:wrapup', '', true), 'docs-system:wrapup', undefined, 5, []).slash).toBeUndefined()
+  // No plugin anywhere: the name stays as typed.
+  expect(confirmSlash(onSlash(blankWork(), '/impeccable', '', true), 'impeccable', undefined, 5, []).work.skill).toEqual({ name: 'impeccable' })
+})

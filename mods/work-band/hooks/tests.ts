@@ -18,9 +18,20 @@ export const parseList = (v: unknown): string[] =>
 
 export type Piece = { text: string; next: string }
 
-// The command cut at &&, ||, ; and |; `next` is the operator after each piece ('' for the last).
+// A lone `&`: not `&&`, nor part of a redirection such as `2>&1`, `&>`, `<&3` or `|&`.
+const BACKGROUND = '(?<![&>|<])&(?![&>])'
+const OPERATOR = new RegExp(`(&&|\\|\\||\\|&|;|\\||\\n|${BACKGROUND})`)
+
+// The command cut at &&, ||, ;, |, |&, a newline and a background &; `next` is
+// the operator after each piece ('' for the last). A line ending in a backslash
+// or in &&, ||, | or |& goes on, and a trailing newline ends nothing.
 export const piecesOf = (command: string): Piece[] => {
-  const parts = command.split(/(&&|\|\||;|\|)/)
+  const parts = command
+    .replace(/\r\n?/g, '\n')
+    .replace(/\\\n/g, ' ')
+    .replace(/(&&|\|\||\|&|\|)[ \t]*\n\s*/g, '$1 ')
+    .trim()
+    .split(OPERATOR)
   const out: Piece[] = []
   for (let i = 0; i < parts.length; i += 2) out.push({ text: parts[i] ?? '', next: parts[i + 1] ?? '' })
   return out
@@ -79,7 +90,8 @@ export const testVerdict = (call: BashCall, r: BashAnswer, extra: readonly strin
     if (isTestRun(p.text, extra)) at = i
   })
   if (at < 0) return null
-  // `a && b` stops at a failure, so the exit code is still the test's; `|`, `;` and `||` hide it.
+  // `a && b` stops at a failure, so the exit code is still the test's; `|`, `;`,
+  // `||`, a newline and a background `&` hide it.
   const isOwnExit = pieces.slice(at).every(p => p.next === '' || p.next === '&&')
   return isOwnExit ? (r.isError ? 'fail' : 'pass') : verdictOf(outputOf(r))
 }

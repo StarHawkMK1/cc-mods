@@ -176,6 +176,14 @@ test('skill.prompt may name the skill apart from its plugin', async ($, on) => {
   expect(await band($, 'terminal')).toContain('Brainstorm')
 })
 
+test('a slash skill typed without its plugin moves the flow and reads its plan', async ($, on) => {
+  world(on, 1_000, { 'docs/superpowers/plans/2026-10-15-auth.md': PLAN })
+  await slash($, 'brainstorming', 'Auth', { pluginName: 'superpowers' })
+  expect(await band($, 'terminal')).toContain('Brainstorm')
+  await slash($, 'executing-plans', 'docs/superpowers/plans/2026-10-15-auth.md', { promptName: 'superpowers:executing-plans' })
+  expect(await band($, 'terminal')).toContain('Build 0/7')
+})
+
 test('a skill.prompt with no slash command waiting changes nothing', async ($, on) => {
   world(on)
   await ($.skill.prompt as (e: unknown) => Promise<unknown>)({ skill: 'superpowers:brainstorming', text: '' })

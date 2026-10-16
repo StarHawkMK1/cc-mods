@@ -68,9 +68,6 @@ test('state that moved while the transcript was read wins', async ($, on) => {
   expect(shown).toContain('Doing live work')
   expect(shown).not.toContain('Build')
 })
-// If the kit runs one dispatch at a time and this test hangs, move the state
-// another way inside the mock: `await $.state.set({ plugin: 'work-band', key: 'work' }, …)`
-// with a list holding 'Doing live work', then keep the same two expectations.
 
 test('a plan named in the Build skill is read after the replay', async ($, on) => {
   const PLAN = ['# Old plan Implementation Plan', ...Array.from({ length: 4 }, (_, i) => `### Task ${i + 1}: Step`)].join('\n')
@@ -87,6 +84,20 @@ test('a plan named in the Build skill is read after the replay', async ($, on) =
   const shown = await band($, 'terminal')
   expect(shown).toContain('Old plan')
   expect(shown).toContain('Build 0/4')
+})
+
+test('a plan that cannot be read still lets the flow come back', async ($, on) => {
+  world(on)
+  on('session.messages', () =>
+    ({
+      value: [
+        { role: 'user', text: 'go', toolUses: [] },
+        { role: 'assistant', text: '', toolUses: [{ tool_use_id: 'u1', tool: 'Skill', input: { skill: 'superpowers:executing-plans', args: 'docs/superpowers/plans/gone.md' } }] },
+      ],
+    }) as never,
+  )
+  await resume($)
+  expect(await band($, 'terminal')).toContain('Build')
 })
 
 test('a transcript that cannot be read draws nothing', async ($, on) => {

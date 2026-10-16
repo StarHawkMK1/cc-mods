@@ -70,15 +70,22 @@ async function togglePane($: EngineInterface): Promise<boolean> {
   return true
 }
 
-// Reads the plan an executing skill was handed, for its title and task count.
-async function readPlan($: EngineInterface, path: string | undefined): Promise<void> {
-  if (!path) return
+// A plan's text; undefined when there is none to read.
+async function planText($: EngineInterface, path: string | undefined): Promise<string | undefined> {
+  if (!path) return undefined
   try {
     const md = await $.fs.read(path)
-    if (typeof md === 'string') await update($, work, prev => (prev.flow ? { ...prev, flow: withPlan(prev.flow, md) } : prev))
+    return typeof md === 'string' ? md : undefined
   } catch {
     // An unreadable plan: the to-do list counts the tasks.
+    return undefined
   }
+}
+
+// Reads the plan an executing skill was handed, for its title and task count.
+async function readPlan($: EngineInterface, path: string | undefined): Promise<void> {
+  const md = await planText($, path)
+  if (md !== undefined) await update($, work, prev => (prev.flow ? { ...prev, flow: withPlan(prev.flow, md) } : prev))
 }
 
 // A skill, called by the model or typed as a slash command: superpowers' move
@@ -97,7 +104,9 @@ async function applyFile($: EngineInterface, path: unknown, content?: unknown): 
 
 // A resumed or branched session starts with empty state: rebuild what outlives
 // a request from the transcript, once. Live work already there stands, and so
-// does anything written while the transcript was read.
+// does anything written while the transcript was read. The plan is read before
+// the one write of the rebuilt work: a `get` after a write in the same dispatch
+// would not see it.
 async function restore($: EngineInterface, skills: readonly string[], tests: readonly string[]): Promise<void> {
   const held = await $.state.get({ plugin: 'work-band', key: 'work' })
   const w0 = held.value ?? blankWork()
@@ -110,8 +119,9 @@ async function restore($: EngineInterface, skills: readonly string[], tests: rea
     const at = await $.clock.now()
     const { work: restored, planPath } = replay(messages, { root, skills, tests, at })
     if (!restored.flow && !restored.todos.length) return
-    const wrote = await $.state.set({ plugin: 'work-band', key: 'work' }, restored, { ifVersion: marked.version })
-    if (wrote.isSet && planPath) await readPlan($, planPath)
+    const md = await planText($, planPath)
+    const flow = restored.flow && md !== undefined ? withPlan(restored.flow, md) : restored.flow
+    await $.state.set({ plugin: 'work-band', key: 'work' }, { ...restored, flow }, { ifVersion: marked.version })
   } catch {
     // No transcript to read: the band waits for live events.
   }
@@ -141,14 +151,22 @@ export const register: Register = (on, options) => {
       })()
     })
     // `claude --resume` or `--continue`: the transcript is already there.
-    await restore($, skills, testCommands)
+    try {
+      await restore($, skills, testCommands)
+    } catch {
+      // Nothing restored: the band waits for live events.
+    }
     return started
   })
 
   // /resume and /branch inside a session clear the state and do not run session.start again.
   on('classic.SessionStart', async ($, e, next) => {
     const result = await next(e)
-    if (e.source === 'resume' || e.source === 'fork') await restore($, skills, testCommands)
+    try {
+      if (e.source === 'resume' || e.source === 'fork') await restore($, skills, testCommands)
+    } catch {
+      // Nothing restored: the band waits for live events.
+    }
     return result
   })
 
@@ -210,10 +228,14 @@ export const register: Register = (on, options) => {
   // A test run, the main session's or a subagent's: the chip shows how the last one went.
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const result = await next(e)
-    const verdict = testVerdict(e as unknown as BashCall, result as BashAnswer, testCommands)
-    if (verdict) {
-      const at = await $.clock.now()
-      await update($, work, w => onTest(w, verdict === 'pass', at))
+    try {
+      const verdict = testVerdict(e as unknown as BashCall, result as BashAnswer, testCommands)
+      if (verdict) {
+        const at = await $.clock.now()
+        await update($, work, w => onTest(w, verdict === 'pass', at))
+      }
+    } catch {
+      // The chip stays as it was; the tool call's answer goes back untouched.
     }
     return result
   })
@@ -232,16 +254,13 @@ export const register: Register = (on, options) => {
     const at = await $.clock.now()
     // An object, not a `let`: TypeScript does not see a write made inside the update callback.
     const box: { slash?: SlashCandidate } = {}
-    await update($, work, w => {
-      const r = confirmSlash(w, e.skill, e.pluginName, at, skills)
+    const w = await update($, work, prev => {
+      const r = confirmSlash(prev, e.skill, e.pluginName, at, skills)
       box.slash = r.slash
       return r.work
     })
     const slash = box.slash
-    if (slash) {
-      const w = await read($, work)
-      if (skillStage(slash.name) === 'build' && w.flow && !w.flow.planTasks) await readPlan($, mdPathOf(slash.args))
-    }
+    if (slash && skillStage(slash.name) === 'build' && w.flow && !w.flow.planTasks) await readPlan($, mdPathOf(slash.args))
     return next(e)
   })
 

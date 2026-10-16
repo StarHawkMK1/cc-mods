@@ -93,11 +93,23 @@ export const onSlash = (w: Work, name: unknown, args: unknown, isIdle: boolean):
   return { ...w, pendingSlash: { name: slashName(name), args: typeof args === 'string' ? args : '', isIdle } }
 }
 
-// The names a `skill.prompt` may go by: as given, and with its plugin in front.
+// The names a `skill.prompt` may go by: as given, with its plugin in front, and
+// a qualified one without its plugin (a slash command may be typed short).
 const promptedKeys = (skill: unknown, pluginName: unknown): string[] => {
   const s = keyOf(skill)
   const p = keyOf(pluginName)
-  return p && s && !s.includes(':') ? [s, `${p}:${s}`] : [s]
+  if (!s.includes(':')) return p && s ? [s, `${p}:${s}`] : [s]
+  return [s, s.slice(s.indexOf(':') + 1)]
+}
+
+// The skill a confirmed slash command is: a name typed short gets its plugin in
+// front, from `pluginName` or from the qualified name `skill.prompt` gave.
+const confirmedName = (typed: string, skill: unknown, pluginName: unknown): string => {
+  if (typed.includes(':')) return typed
+  const plugin = slashName(pluginName)
+  if (plugin) return `${plugin}:${typed}`
+  const prompted = slashName(skill)
+  return prompted.includes(':') ? prompted : typed
 }
 
 // `skill.prompt` for the waiting slash command: it was a skill. An idle one is a
@@ -114,5 +126,6 @@ export const confirmSlash = (
   if (!c || !promptedKeys(skill, pluginName).includes(keyOf(c.name))) return { work: w }
   const { pendingSlash: _done, ...rest } = w
   const base = c.isIdle ? onRequest(rest, at) : rest
-  return { work: onSkill(base, c.name, c.args, skills), slash: c }
+  const slash = { ...c, name: confirmedName(c.name, skill, pluginName) }
+  return { work: onSkill(base, slash.name, slash.args, skills), slash }
 }
