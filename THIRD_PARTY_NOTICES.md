@@ -14,6 +14,15 @@
 | `mods/replay-theater/` | `claude-code/mods/replay-theater/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 수정 없음 |
 | `mods/token-weather/` | `claude-code/mods/token-weather/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 수정 없음 |
 
+## data-goblin/claude-code-filetree
+
+- 저장소: https://github.com/data-goblin/claude-code-filetree
+- 라이선스: MIT License, Copyright (c) 2026 Kurt Buhler (원문: [`licenses/MIT-data-goblin-claude-code-filetree.txt`](licenses/MIT-data-goblin-claude-code-filetree.txt), mod 폴더의 `LICENSE`에도 그대로 있음)
+
+| 이 저장소 경로 | upstream 경로 | upstream 커밋 | 수정 여부 |
+| --- | --- | --- | --- |
+| `mods/filetree/` | `/` (저장소 루트) | `0956f9e01b7d6a87b50c531cafbd55f16105962a` | 수정 없음 (upstream의 `.claude-plugin/marketplace.json`, `.github/`, `.githooks/`는 복사하지 않음) |
+
 ## johnnyvizz/claude-kit
 
 - 저장소: https://github.com/johnnyvizz/claude-kit

@@ -10,11 +10,12 @@ Claude Code [mods](https://code.claude.com/docs/en/plugins/mods/overview)를 모
 | mod | 하는 일 | 출처 |
 | --- | --- | --- |
 | [`blast-radius`](mods/blast-radius/) | `rm -rf`, `git reset --hard`, 강제 푸시 같은 위험한 셸 명령을 보류하고, 무엇이 바뀌는지 보여 준 뒤 진행/취소 버튼을 띄웁니다. Bash 도구 호출만 감시합니다. | Anthropic 샘플 |
+| [`filetree`](mods/filetree/) | 오른쪽 사이드 패널에 IDE식 파일 트리를 띄웁니다. 파일·폴더별 git 상태와 변경 줄 수, Claude가 읽는(보라)·쓰는(주황)·커밋하는(초록) 파일에 반짝임 표시, 선택한 파일을 프롬프트 컨텍스트로 전달. `/filetree`로 다시 엽니다. 터미널에서는 `/tui fullscreen`과 110열 이상이 필요합니다. | [data-goblin/claude-code-filetree](https://github.com/data-goblin/claude-code-filetree) (MIT) |
 | [`replay-theater`](mods/replay-theater/) | `/replay`: 마지막 턴에 Claude가 한 파일 편집을 diff 단위로 다시 봅니다. | Anthropic 샘플 |
 | [`token-weather`](mods/token-weather/) | 프롬프트 위에 컨텍스트 윈도우 사용량을 날씨 아이콘과 그래프로 보여 줍니다. | Anthropic 샘플 |
 | [`work-band`](mods/work-band/) | 프롬프트 위 한 줄 진행 막대: superpowers 흐름 단계나 Claude의 할 일 진행, 실행 중인 서브에이전트 수. 누르면 에이전트 패널(모델, 컨텍스트, 예상 비용, 시간). 토큰을 더 쓰지 않습니다. | 직접 작성 (savvy-progress 일부 차용, MIT) |
 
-"Anthropic 샘플"은 [anthropics/claude-code-playground](https://github.com/anthropics/claude-code-playground/tree/main/claude-code/mods)에서 수정 없이 복사한 mod입니다. upstream이 밝힌 대로 있는 그대로 공유된 샘플이며 공식 제품이 아니고 지원도 없습니다. 자세한 출처는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 있습니다.
+"Anthropic 샘플"은 [anthropics/claude-code-playground](https://github.com/anthropics/claude-code-playground/tree/main/claude-code/mods)에서 수정 없이 복사한 mod입니다. upstream이 밝힌 대로 있는 그대로 공유된 샘플이며 공식 제품이 아니고 지원도 없습니다. `filetree`는 [data-goblin/claude-code-filetree](https://github.com/data-goblin/claude-code-filetree)에서 mod 파일을 수정 없이 복사했습니다(upstream의 마켓플레이스 매니페스트, CI, git 훅은 제외). 자세한 출처는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 있습니다.
 
 ## 설치
 
@@ -34,6 +35,7 @@ Claude Code [mods](https://code.claude.com/docs/en/plugins/mods/overview)를 모
 claude plugin marketplace add StarHawkMK1/cc-mods
 claude plugin install replay-theater@cc-mods --scope user
 claude plugin install blast-radius@cc-mods --scope user
+claude plugin install filetree@cc-mods --scope user
 claude plugin install token-weather@cc-mods --scope user
 claude plugin install work-band@cc-mods --scope user
 ```

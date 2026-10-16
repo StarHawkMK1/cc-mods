@@ -3,12 +3,17 @@
   "owner": {
     "name": "StarHawkMK1"
   },
-  "description": "Custom Claude Code mods, plus vendored examples from anthropics/claude-code-playground.",
+  "description": "Custom Claude Code mods, plus vendored mods from anthropics/claude-code-playground and data-goblin/claude-code-filetree.",
   "plugins": [
     {
       "name": "blast-radius",
       "source": "./mods/blast-radius",
       "description": "Holds risky shell commands and shows what they would change, with Proceed and Cancel buttons."
+    },
+    {
+      "name": "filetree",
+      "source": "./mods/filetree",
+      "description": "An IDE-style file tree in the side pane, with git status and a shimmer on files Claude reads, writes or commits."
     },
     {
       "name": "replay-theater",
