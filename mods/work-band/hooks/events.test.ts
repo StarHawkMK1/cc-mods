@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Flow, Work } from '../types'
-import { onAgentEnd, onAgentStart, onDismiss, onFile, onMainTurnEnd, onRequest, onSkill, onTaskCreate, onTaskUpdate, onTodoWrite } from './events'
+import { confirmSlash, onAgentEnd, onAgentStart, onDismiss, onFile, onMainTurnEnd, onRequest, onSkill, onSlash, onTaskCreate, onTaskUpdate, onTodoWrite } from './events'
 import { blankWork } from './flow'
 
 const flow = (f: Partial<Flow> = {}): Flow => ({ stage: 'brainstorm', isFinished: false, ...f })
@@ -40,9 +40,9 @@ test('onRequest is 0.1’s new request', () => {
 })
 
 test('onMainTurnEnd ends a Finish flow only after the reply, and only on an answer', () => {
-  expect(onMainTurnEnd(withFlow({ stage: 'finish' }), true).flow?.isFinished).toBe(false)
-  expect(onMainTurnEnd(withFlow({ stage: 'finish', hasReply: true }), false).flow?.isFinished).toBe(false)
-  expect(onMainTurnEnd(withFlow({ stage: 'finish', hasReply: true }), true).flow?.isFinished).toBe(true)
+  expect(onMainTurnEnd(withFlow({ stage: 'finish' }), 0, true).flow?.isFinished).toBe(false)
+  expect(onMainTurnEnd(withFlow({ stage: 'finish', hasReply: true }), 0, false).flow?.isFinished).toBe(false)
+  expect(onMainTurnEnd(withFlow({ stage: 'finish', hasReply: true }), 0, true).flow?.isFinished).toBe(true)
 })
 
 test('✕ ends the flow or hides the harness band; a new subagent brings it back', () => {
@@ -56,4 +56,46 @@ test('onAgentEnd drops a finished run’s own list', () => {
   const w = onTodoWrite(blankWork(), 'ag-1', [{ content: 'B' }])
   expect(onAgentEnd(w, 'ag-1').agentTodos).toEqual({})
   expect(onAgentEnd(w, 'ag-2')).toBe(w)
+})
+
+test('onRequest starts the clock; onMainTurnEnd stops it once', () => {
+  const w = onRequest(blankWork(), 1_000)
+  expect(w.clock).toEqual({ from: 1_000 })
+  const ended = onMainTurnEnd(w, 4_000, true)
+  expect(ended.clock).toEqual({ from: 1_000, to: 4_000 })
+  expect(onMainTurnEnd(ended, 9_000, true).clock).toEqual({ from: 1_000, to: 4_000 })
+  expect(onMainTurnEnd(blankWork(), 9_000, true).clock).toBeUndefined()
+})
+
+test('a slash command waits for skill.prompt; an idle one is a new request', () => {
+  const done = onTodoWrite(blankWork(), undefined, [{ content: 'A', status: 'completed' }])
+  const waiting = onSlash(done, '/superpowers:brainstorming', 'Auth', true)
+  expect(waiting.pendingSlash).toEqual({ name: 'superpowers:brainstorming', args: 'Auth', isIdle: true })
+  // command.run after prompt.submit for the same command keeps the first.
+  expect(onSlash(waiting, 'superpowers:brainstorming', 'other', false)).toBe(waiting)
+  expect(confirmSlash(waiting, 'impeccable', undefined, 5).work).toBe(waiting)
+  const { work: w, slash } = confirmSlash(waiting, 'brainstorming', 'superpowers', 5)
+  expect(slash?.name).toBe('superpowers:brainstorming')
+  expect(w.pendingSlash).toBeUndefined()
+  expect(w.todos).toEqual([])
+  expect(w.clock).toEqual({ from: 5 })
+  expect(w.flow).toMatchObject({ stage: 'brainstorm', topic: 'Auth' })
+})
+
+test('a slash skill typed into a running turn is not a new request; an idle one in Finish is the reply', () => {
+  const busy = confirmSlash(onSlash(onRequest(blankWork(), 1), 'superpowers:brainstorming', '', false), 'superpowers:brainstorming', undefined, 5).work
+  expect(busy.clock).toEqual({ from: 1 })
+  expect(busy.flow?.stage).toBe('brainstorm')
+  const reply = confirmSlash(onSlash(withFlow({ stage: 'finish' }), 'superpowers:systematic-debugging', '', true), 'superpowers:systematic-debugging', undefined, 5).work
+  expect(reply.flow?.hasReply).toBe(true)
+})
+
+test('a turn’s end drops an idle slash command never expanded; a queued one waits for its turn', () => {
+  const idle = onSlash(blankWork(), 'model', '', true)
+  expect(onMainTurnEnd(idle, 2, true).pendingSlash).toBeUndefined()
+  expect(onRequest(idle, 2).pendingSlash).toBeUndefined()
+  const queued = onSlash(blankWork(), 'superpowers:brainstorming', 'Auth', false)
+  expect(onMainTurnEnd(queued, 2, true).pendingSlash?.name).toBe('superpowers:brainstorming')
+  expect(onRequest(queued, 2).pendingSlash).toBeUndefined()
+  expect(onSlash(blankWork(), '  ', '', true)).toEqual(blankWork())
 })

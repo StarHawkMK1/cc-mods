@@ -64,3 +64,12 @@ test('rowSvg stays well under the Svg size limit at the widest band', () => {
   const svg = rowSvg(bar({ ratio: 1, runRatio: 1, isFinished: true, pill: 'Done' }), 1600, true)
   expect(svg.length).toBeLessThan(65_536)
 })
+
+test('rowSvg puts the time before the crab, faint while it runs', () => {
+  const live = rowSvg(bar(), 800, true, { time: '2:13', isLive: true })
+  expect(live).toContain('>2:13</text>')
+  expect(live).toContain('opacity="0.6"')
+  expect(live).toContain('>57%</text>')
+  expect(rowSvg(bar(), 800, true, { time: '2:13' })).not.toContain('opacity="0.6"')
+  expect(rowSvg(bar(), 800, true)).not.toContain('2:13')
+})

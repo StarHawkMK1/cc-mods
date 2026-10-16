@@ -75,12 +75,30 @@ export const crab = (x: number, y: number, isWalking: boolean, scale = CRAB_SCAL
   return `<g transform="translate(${x},${y}) scale(${scale})" opacity="${dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="crab${isWalking ? ' run' : ''}">${g('bd')}${g('la')}${g('lb')}</g></g>`
 }
 
+// What sits between the percent and the crab, laid out right to left.
+export type Tail = { time?: string; isLive?: boolean }
+const TAIL_FONT = 12
+
+// The tail's SVG, ending at `right`, and the width it takes with its gap.
+export const tailSvg = (tail: Tail, right: number): { svg: string; width: number } => {
+  const parts: string[] = []
+  let x = right
+  const put = (text: string, attrs: string) => {
+    parts.push(`<text x="${x}" y="${H / 2 + 4.5}" text-anchor="end" font-family="${FONT}" font-size="${TAIL_FONT}" font-variant-numeric="tabular-nums" ${attrs}>${xml(text)}</text>`)
+    x -= Math.round(textWidth(text, TAIL_FONT)) + 10
+  }
+  if (tail.time) put(tail.time, `class="m"${tail.isLive ? ' opacity="0.6"' : ''}`)
+  return { svg: parts.join(''), width: right - x }
+}
+
 // The whole row is one SVG (the desktop wraps sibling elements): title, bar,
-// pill, percent and crab; the count and the dismiss are Buttons beside it.
-export const rowSvg = (b: Bar, W: number, isWorking: boolean): string => {
-  const title = fitText(b.title, 13, Math.max(60, W * 0.4))
+// pill, percent, the tail and the crab; the count and the dismiss are Buttons beside it.
+export const rowSvg = (b: Bar, W: number, isWorking: boolean, tail: Tail = {}): string => {
+  const right = W - CRAB_W - 6
+  const extra = tailSvg(tail, right)
+  const title = fitText(b.title, 13, Math.max(60, W * 0.4 - extra.width))
   const BAR_X = Math.round(16 + textWidth(title, 13) + 12)
-  const BAR_W = Math.max(60, W - BAR_X - 46 - CRAB_W)
+  const BAR_W = Math.max(60, W - BAR_X - 46 - CRAB_W - extra.width)
   const color = b.isFinished ? DONE : ACCENT
   const y0 = (H - BAR_H) / 2
   const fillW = Math.round(BAR_W * clamp01(b.ratio))
@@ -137,8 +155,8 @@ export const rowSvg = (b: Bar, W: number, isWorking: boolean): string => {
 <rect x="${pillX}" width="${pillW}" height="${BAR_H}" rx="${BAR_H / 2}" fill="${color}"/>
 <text x="${pillX + pillW / 2}" y="${BAR_H / 2 + 4}" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="600" fill="#ffffff">${xml(b.pill)}</text>
 </g>
-<text class="m" x="${W - CRAB_W - 6}" y="${H / 2 + 4.5}" text-anchor="end" font-family="${FONT}" font-size="12.5" font-variant-numeric="tabular-nums">${percent}</text>
-${CRAB_CSS}${crab(W - CRAB_W + 1, 0, isWorking, 0.8)}
+<text class="m" x="${right - extra.width}" y="${H / 2 + 4.5}" text-anchor="end" font-family="${FONT}" font-size="12.5" font-variant-numeric="tabular-nums">${percent}</text>
+${extra.svg}${CRAB_CSS}${crab(W - CRAB_W + 1, 0, isWorking, 0.8)}
 </svg>`
 }
 

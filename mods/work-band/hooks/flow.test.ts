@@ -7,9 +7,11 @@ import {
   agentsBar,
   blankWork,
   cleanTodos,
+  clockMs,
   countTasks,
   createTodo,
   flowBar,
+  isClockLive,
   listOf,
   mdPathOf,
   onWrite,
@@ -206,4 +208,15 @@ test('agentsBar and pickBar: flow, then list, then subagents', () => {
   expect(pickBar({ ...w, isHidden: true, todos: [todo('1', 'pending')] }, runs, s)).toBeNull()
   expect(pickBar({ ...w, isHidden: true, flow: { stage: 'plan', isFinished: false } }, runs, s)?.pill).toBe('Plan')
   expect(pickBar(w, [], s)).toBeNull()
+})
+
+test('clockMs runs to now, or to the turn’s end', () => {
+  const w = blankWork()
+  expect(clockMs(w, 5_000)).toBeNull()
+  expect(clockMs({ ...w, clock: { from: 1_000 } }, 5_000)).toBe(4_000)
+  expect(clockMs({ ...w, clock: { from: 6_000 } }, 5_000)).toBe(0)
+  expect(clockMs({ ...w, clock: { from: 1_000, to: 3_000 } }, 9_000)).toBe(2_000)
+  expect(isClockLive({ ...w, clock: { from: 1 } })).toBe(true)
+  expect(isClockLive({ ...w, clock: { from: 1, to: 2 } })).toBe(false)
+  expect(isClockLive(w)).toBe(false)
 })

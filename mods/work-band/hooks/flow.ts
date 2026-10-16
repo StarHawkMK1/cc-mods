@@ -189,6 +189,13 @@ export const mdPathOf = (args: unknown): string | undefined =>
 // ---------------------------------------------------------------------------
 // What the band draws.
 
+// The request's clock runs from its start until its main turn ends.
+export const isClockLive = (w: Work): boolean => !!w.clock && w.clock.to === undefined
+
+// Milliseconds on the request's clock, or null when no request is timed.
+export const clockMs = (w: Work, now: number): number | null =>
+  w.clock ? (w.clock.to ?? Math.max(now, w.clock.from)) - w.clock.from : null
+
 export type Bar = {
   title: string
   /** The label riding the head of the fill. */

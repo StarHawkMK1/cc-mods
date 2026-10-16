@@ -40,6 +40,7 @@ export function world(on: On, now = 1_000, files: Record<string, string> = {}) {
   on('tool.call', { tool: 'Edit' }, () => ({ result: {} }) as never)
   on('prompt.submit', (_$, e) => ({ text: e.text }) as never)
   on('command.run', () => ({ text: '' }) as never)
+  on('skill.prompt', (_$, e) => ({ text: (e as { text?: string }).text ?? '' }) as never)
   on('agent.spawn', (_$, e) => ({ model: 'claude-opus-5-5', agentId: `ag-${e.tool_use_id}` }) as never)
   on('turn.complete', () => ({ text: '' }) as never)
   return { clock, panes: () => panes }
@@ -89,3 +90,16 @@ export const endTurn = ($: Engine, reason = 'answer') =>
   ($.turn.complete as (e: unknown) => Promise<unknown>)({ reason, answer: 'ok', usage: null })
 export const submit = ($: Engine, text: string, extra: Record<string, unknown> = {}) =>
   ($.prompt.submit as (e: unknown) => Promise<unknown>)({ text, wait: false, origin: { kind: 'composer' }, ...extra })
+
+// A slash command the user typed: prompt.submit, then, for a skill, the engine
+// expanding it (skill.prompt). `promptName`/`pluginName` spell the skill the way skill.prompt may.
+export const slash = async (
+  $: Engine,
+  name: string,
+  args = '',
+  o: { isSkill?: boolean; promptName?: string; pluginName?: string; extra?: Record<string, unknown> } = {},
+) => {
+  await submit($, `/${name}${args ? ` ${args}` : ''}`, { command: { name, args }, ...o.extra })
+  if (o.isSkill === false) return
+  await ($.skill.prompt as (e: unknown) => Promise<unknown>)({ skill: o.promptName ?? name, text: '', ...(o.pluginName ? { pluginName: o.pluginName } : {}) })
+}

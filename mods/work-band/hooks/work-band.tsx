@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { AgentRun, Panel } from '../types'
+import type { AgentRun, Panel, SlashCandidate } from '../types'
 import { costOf, ctxOf, elapsed, fmtCost, fmtTime, fmtTokens, modelName, runModel, totals, usageTokens, windowOf, type Usage } from './agents'
 import {
   ACCENT,
@@ -21,8 +21,8 @@ import {
   headerSvg,
   rowSvg,
 } from './draw'
-import { MAX_TEXT, blankWork, clip, listOf, mdPathOf, pickBar, skillStage, stepsOf, withPlan, type TaskUpdateInput } from './flow'
-import { onAgentEnd, onAgentStart, onDismiss, onFile, onMainTurnEnd, onRequest, onSkill, onTaskCreate, onTaskUpdate, onTodoWrite } from './events'
+import { MAX_TEXT, blankWork, clip, clockMs, isClockLive, listOf, mdPathOf, pickBar, skillStage, stepsOf, withPlan, type TaskUpdateInput } from './flow'
+import { confirmSlash, onAgentEnd, onAgentStart, onDismiss, onFile, onMainTurnEnd, onRequest, onSkill, onSlash, onTaskCreate, onTaskUpdate, onTodoWrite } from './events'
 import { STRINGS, langOf, type Lang } from './i18n'
 
 const PANE = 'work-band-agents'
@@ -100,11 +100,12 @@ export const register: Register = (on, options) => {
       name: 'work-band',
       description: 'Show or hide the agents panel: running and finished subagents with model, context, cost and time',
     })
-    // Ticks the running agents' clocks; quiet when nothing runs.
+    // Ticks the running agents' clocks and the request's; quiet when nothing runs.
     $.clock.every(1000, () => {
       void (async () => {
         const list = await read($, agents)
-        if (!list.some(a => a.status === 'running')) return
+        const w = await read($, work)
+        if (!list.some(a => a.status === 'running') && !isClockLive(w)) return
         const at = await $.clock.now()
         await update($, now, () => at)
       })()
@@ -167,19 +168,41 @@ export const register: Register = (on, options) => {
     return result
   })
 
-  // A slash command typed for a superpowers skill moves the flow. Builds without
-  // `prompt.submit`'s `command` report it only here; with it, the second call is a no-op.
+  // A slash command the user sent waits for skill.prompt to say it is a skill.
+  // Builds without prompt.submit's `command` report it only here; with it, the second is a no-op.
   on('command.run', async ($, e, next) => {
-    if (skillStage(e.command)) await applySkill($, e.command, e.args)
+    const kind = e.origin?.kind
+    if (kind === undefined || USER_ORIGINS.has(kind)) await update($, work, w => onSlash(w, e.command, e.args, true))
     return next(e)
   })
 
-  // A prompt the user sent while idle starts a new request; a slash command that
-  // runs a superpowers skill moves the flow; a prompt typed into a running turn,
-  // or one the user did not send (a finished background task, a peer), does neither.
+  // The engine expands a skill: the waiting slash command was one. Typed while
+  // idle it is a new request; a superpowers skill moves the flow.
+  on('skill.prompt', async ($, e, next) => {
+    const at = await $.clock.now()
+    // An object, not a `let`: TypeScript does not see a write made inside the update callback.
+    const box: { slash?: SlashCandidate } = {}
+    await update($, work, w => {
+      const r = confirmSlash(w, e.skill, e.pluginName, at)
+      box.slash = r.slash
+      return r.work
+    })
+    const slash = box.slash
+    if (slash) {
+      const w = await read($, work)
+      if (skillStage(slash.name) === 'build' && w.flow && !w.flow.planTasks) await readPlan($, mdPathOf(slash.args))
+    }
+    return next(e)
+  })
+
+  // A prompt the user sent while idle starts a new request; a slash command
+  // waits for skill.prompt; a prompt typed into a running turn, or one the user
+  // did not send (a finished background task, a peer), does neither.
   on('prompt.submit', async ($, e, next) => {
-    if (e.command) await applySkill($, e.command.name, e.command.args)
-    else if (e.turnId === undefined && USER_ORIGINS.has(e.origin?.kind)) {
+    const isUser = USER_ORIGINS.has(e.origin?.kind)
+    if (e.command) {
+      if (isUser) await update($, work, w => onSlash(w, e.command?.name, e.command?.args, e.turnId === undefined))
+    } else if (e.turnId === undefined && isUser) {
       const at = await $.clock.now()
       await update($, work, w => onRequest(w, at))
     }
@@ -242,8 +265,8 @@ export const register: Register = (on, options) => {
 
   on('turn.complete', async ($, e, next) => {
     const agentId = e.agentId
+    const at = await $.clock.now()
     if (agentId) {
-      const at = await $.clock.now()
       await update($, agents, list =>
         list.map((a): AgentRun => {
           if (a.agentId !== agentId) return a
@@ -260,9 +283,9 @@ export const register: Register = (on, options) => {
       await update($, now, () => at)
       await update($, work, w => onAgentEnd(w, agentId))
     } else {
-      // The finishing skill ends its turn asking merge / PR / keep; the main turn
-      // that carries out the user's reply closes the flow, if it answered.
-      await update($, work, w => onMainTurnEnd(w, e.reason === 'answer'))
+      // The request's clock stops; in Finish, the main turn that carries out the
+      // user's reply closes the flow, if it answered.
+      await update($, work, w => onMainTurnEnd(w, at, e.reason === 'answer'))
     }
     return next(e)
   })
@@ -274,6 +297,10 @@ export const register: Register = (on, options) => {
     const list = await read($, agents)
     const bar = pickBar(w, list, s)
     if (!bar) return next(e)
+    // Reading `now` redraws the band on each tick; the clock reads the time itself.
+    await read($, now)
+    const ms = clockMs(w, await $.clock.now())
+    const isLive = isClockLive(w)
     // Draw this row with the other mods' bands beneath it. Claude Code's own
     // placeholder ({ type: 'engine' }) is never nested: the desktop drops a band that nests it.
     const drawn = await Promise.resolve(next(e)).catch(() => null)
@@ -284,26 +311,20 @@ export const register: Register = (on, options) => {
     const running = list.filter(a => a.status === 'running').length
     const percent = `${Math.round(bar.ratio * 100)}%`
     const crew = running ? <Button key="work-band-agents" label={`×${running}`} plain onPress={() => void togglePane($)} /> : null
-    const dismiss = (
-      <Button
-        key="work-band-dismiss"
-        label="✕"
-        plain
-        role="dismiss"
-        onPress={() => update($, work, prev => onDismiss(prev, bar.isFlow))}
-      />
-    )
+    const dismiss = <Button key="work-band-dismiss" label="✕" plain role="dismiss" onPress={() => update($, work, prev => onDismiss(prev, bar.isFlow))} />
 
     // The terminal's element table is completed with an `Svg` that draws nothing: test the surface too.
     if (e.surface !== 'terminal' && 'Svg' in ui) {
       const { Svg } = ui
       // About 8 CSS px per reported column; the rest is the count, the dismiss and their gaps.
       const width = Math.max(180, Math.min(1600, (e.props.bodyColumns || 100) * 8 - 96))
-      const alt = [bar.title, bar.pill, percent, bar.doing].filter(Boolean).join(' · ')
+      // Too narrow for everything: the time goes first.
+      const time = ms !== null && width >= 360 ? fmtTime(ms) : undefined
+      const alt = [bar.title, bar.pill, percent, time, bar.doing].filter(Boolean).join(' · ')
       return (
         <Box flexDirection="column">
           <Box flexDirection="row" alignItems="center" gap={1}>
-            <Svg source={rowSvg(bar, width, running > 0)} alt={alt} width={width} height={H} />
+            <Svg source={rowSvg(bar, width, running > 0, { time, isLive })} alt={alt} width={width} height={H} />
             {crew}
             {dismiss}
           </Box>
@@ -313,8 +334,10 @@ export const register: Register = (on, options) => {
     }
 
     const cols = e.props.bodyColumns
+    // Too narrow for everything: the time goes first.
+    const time = ms !== null && cols >= 60 ? fmtTime(ms) : null
     const titleW = Math.max(8, Math.min(30, bar.title.length + 2, Math.floor(cols / 3)))
-    const width = Math.max(6, Math.min(40, cols - titleW - 32))
+    const width = Math.max(6, Math.min(40, cols - titleW - 32 - (time ? time.length + 2 : 0)))
     const color = bar.isFinished ? DONE : ACCENT
     return (
       <Box flexDirection="column">
@@ -326,6 +349,7 @@ export const register: Register = (on, options) => {
           <Text color={color}>{barText(bar.ratio, width)}</Text>
           <Text bold>{bar.pill}</Text>
           <Text dimColor>{percent}</Text>
+          {time && <Text dimColor={isLive}>{time}</Text>}
           <Text color={CLAY}>▣</Text>
           {crew}
           {dismiss}

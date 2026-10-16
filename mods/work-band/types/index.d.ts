@@ -26,6 +26,12 @@ export type Flow = {
   hasReply?: boolean
 }
 
+/** The current request's clock: from its start until its main turn first ends. */
+export type Clock = { from: number; to?: number }
+
+/** A slash command the user sent, waiting for `skill.prompt` to say it is a skill. */
+export type SlashCandidate = { name: string; args: string; isIdle: boolean }
+
 export type Work = {
   flow: Flow | null
   /** The main session's to-do list. */
@@ -36,6 +42,9 @@ export type Work = {
   since: number
   /** The harness band was dismissed with ✕ and waits for new data. */
   isHidden: boolean
+  /** Set by a new request; absent after a replay until the next one. */
+  clock?: Clock
+  pendingSlash?: SlashCandidate
 }
 
 export type AgentStatus = 'running' | 'done' | 'failed'

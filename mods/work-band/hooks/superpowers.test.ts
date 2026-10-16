@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { BAND, PLUGIN, SURFACES, band, endTurn, skill, submit, todoWrite, world, write } from './test-world'
+import { BAND, PLUGIN, SURFACES, band, endTurn, skill, slash, submit, todoWrite, world, write } from './test-world'
 
 const PLAN = [
   '# Auth login Implementation Plan',
@@ -87,9 +87,11 @@ test('stages only move forward; brainstorming starts afresh', async ($, on) => {
   expect(shown).toContain('Brainstorm')
 })
 
-test('a slash command starts the flow', async ($, on) => {
+test('a slash command starts the flow once the engine expands the skill', async ($, on) => {
   world(on)
   await submit($, '/superpowers:brainstorming Auth', { command: { name: 'superpowers:brainstorming', args: 'Auth' } })
+  expect(await band($, 'terminal')).toBeNull()
+  await ($.skill.prompt as (e: unknown) => Promise<unknown>)({ skill: 'superpowers:brainstorming', text: '' })
   const shown = await band($, 'terminal')
   expect(shown).toContain('Auth')
   expect(shown).toContain('Brainstorm')
@@ -141,7 +143,8 @@ test('a failed skill call changes nothing', async ($, on) => {
 
 test('a typed slash command reaches the flow through command.run too', async ($, on) => {
   world(on)
-  await ($.command.run as (e: unknown) => Promise<unknown>)({ command: 'superpowers:brainstorming', args: 'Typed topic' })
+  await ($.command.run as (e: unknown) => Promise<unknown>)({ command: 'superpowers:brainstorming', args: 'Typed topic', origin: { kind: 'composer' } })
+  await ($.skill.prompt as (e: unknown) => Promise<unknown>)({ skill: 'superpowers:brainstorming', text: '' })
   const shown = await band($, 'terminal')
   expect(shown).toContain('Typed topic')
   expect(shown).toContain('Brainstorm')
@@ -165,4 +168,24 @@ test('a Finish turn that did not answer does not end the flow', async ($, on) =>
   const shown = await band($, 'terminal')
   expect(shown).toContain('Finish')
   expect(shown).not.toContain('Done')
+})
+
+test('skill.prompt may name the skill apart from its plugin', async ($, on) => {
+  world(on)
+  await slash($, 'superpowers:brainstorming', 'Auth', { promptName: 'brainstorming', pluginName: 'superpowers' })
+  expect(await band($, 'terminal')).toContain('Brainstorm')
+})
+
+test('a skill.prompt with no slash command waiting changes nothing', async ($, on) => {
+  world(on)
+  await ($.skill.prompt as (e: unknown) => Promise<unknown>)({ skill: 'superpowers:brainstorming', text: '' })
+  expect(await band($, 'terminal')).toBeNull()
+})
+
+test('a slash command never expanded goes stale when the turn ends', async ($, on) => {
+  world(on)
+  await submit($, '/superpowers:brainstorming Auth', { command: { name: 'superpowers:brainstorming', args: 'Auth' } })
+  await endTurn($)
+  await ($.skill.prompt as (e: unknown) => Promise<unknown>)({ skill: 'superpowers:brainstorming', text: '' })
+  expect(await band($, 'terminal')).toBeNull()
 })
