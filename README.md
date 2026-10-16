@@ -12,7 +12,7 @@ Claude Code [mods](https://code.claude.com/docs/en/plugins/mods/overview)를 모
 | [`blast-radius`](mods/blast-radius/) | `rm -rf`, `git reset --hard`, 강제 푸시 같은 위험한 셸 명령을 보류하고, 무엇이 바뀌는지 보여 준 뒤 진행/취소 버튼을 띄웁니다. Bash 도구 호출만 감시합니다. | Anthropic 샘플 |
 | [`replay-theater`](mods/replay-theater/) | `/replay`: 마지막 턴에 Claude가 한 파일 편집을 diff 단위로 다시 봅니다. | Anthropic 샘플 |
 | [`token-weather`](mods/token-weather/) | 프롬프트 위에 컨텍스트 윈도우 사용량을 날씨 아이콘과 그래프로 보여 줍니다. | Anthropic 샘플 |
-| [`work-band`](mods/work-band/) | 프롬프트 위 한 줄 진행 막대: superpowers 흐름 단계나 Claude의 할 일 진행, 실행 중인 서브에이전트 수. 누르면 에이전트 패널(모델, 컨텍스트, 예상 비용, 시간). 토큰을 더 쓰지 않습니다. | 직접 작성 (savvy-progress 일부 차용, MIT) |
+| [`work-band`](mods/work-band/) | 프롬프트 위 한 줄 진행 막대: superpowers 흐름 단계, 다른 스킬, Claude의 할 일 진행, 마지막 테스트 결과(빨강/초록), 요청 경과 시간, 실행 중인 서브에이전트 수. 누르면 에이전트 패널(모델, 컨텍스트, 예상 비용, 시간). resume 때 흐름을 되살립니다. 토큰을 더 쓰지 않습니다. | 직접 작성 (savvy-progress 일부 차용, MIT) |
 
 "Anthropic 샘플"은 [anthropics/claude-code-playground](https://github.com/anthropics/claude-code-playground/tree/main/claude-code/mods)에서 수정 없이 복사한 mod입니다. upstream이 밝힌 대로 있는 그대로 공유된 샘플이며 공식 제품이 아니고 지원도 없습니다. 자세한 출처는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 있습니다.
 

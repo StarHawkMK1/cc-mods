@@ -23,7 +23,7 @@
     {
       "name": "work-band",
       "source": "./mods/work-band",
-      "description": "A one-line band above the prompt: the superpowers stage or Claude's to-do progress, and how many subagents are running."
+      "description": "A one-line band above the prompt: the superpowers stage, another skill or Claude's to-do progress, the last test run, the request's time, and how many subagents are running. Comes back on resume."
     }
   ]
 }
