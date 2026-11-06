@@ -1,6 +1,6 @@
 # Third-party notices
 
-이 저장소의 `mods/` 아래 일부 mod는 다른 저장소에서 복사한 것입니다. 복사한 mod는 원래 라이선스를 따릅니다.
+이 저장소의 `mods/` 아래 일부 mod는 다른 저장소에서 복사한 것입니다. 복사한 mod는 원래 라이선스를 따릅니다. 아래 [외부 참조 mod](#외부-참조-mod)는 복사하지 않고 원래 저장소에서 받도록 가리키기만 합니다.
 
 ## anthropics/claude-code-playground
 
@@ -10,8 +10,6 @@
 
 | 이 저장소 경로 | upstream 경로 | upstream 커밋 | 수정 여부 |
 | --- | --- | --- | --- |
-| `mods/blast-radius/` | `claude-code/mods/blast-radius/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 수정 없음 |
-| `mods/replay-theater/` | `claude-code/mods/replay-theater/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 수정 없음 |
 | `mods/token-weather/` | `claude-code/mods/token-weather/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 입력창 위 밴드에서 다른 mod의 밴드를 그 아래에 이어 그림, `hasSurvey`/`bodyColumns`를 `e.props`에서 읽음, 테스트 추가 |
 
 ## johnnyvizz/claude-kit
@@ -26,3 +24,11 @@
 | `mods/work-band/hooks/work-band.tsx` | `plugins/savvy-progress/hooks/register.tsx` | `c871c153ead54ad9547cc717d0f3e5a676c73986` | 서브에이전트 수집 훅(`agent.spawn`, `turn.step`, `turn.complete`)과 패널 렌더 구조를 차용해 수정 |
 
 복사한 mod를 수정하면 "수정 여부" 칸에 변경 내용을 한 줄로 적고, 그 mod의 `.claude-plugin/plugin.json` `version`을 올립니다.
+
+## 외부 참조 mod
+
+이 저장소에 파일이 없습니다. [`marketplace.json`](.claude-plugin/marketplace.json)이 아래 커밋을 가리키고, 설치할 때 원래 저장소에서 받습니다. 라이선스는 각 저장소의 것을 따릅니다. 고정 커밋은 `node scripts/update-external.mjs`로 올립니다([README](README.md#외부-mod-업데이트)).
+
+| 설치 ID | 저장소 | 라이선스 | 고정 릴리스 | 고정 커밋 |
+| --- | --- | --- | --- | --- |
+| `filetree@cc-mods` | https://github.com/data-goblin/claude-code-filetree | MIT, Copyright (c) 2026 Kurt Buhler | `v0.8.0` | `2b42d0faf7072a77055cb1fb930ed05f0639256d` |

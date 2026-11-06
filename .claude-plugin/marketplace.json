@@ -3,17 +3,17 @@
   "owner": {
     "name": "StarHawkMK1"
   },
-  "description": "Custom Claude Code mods, plus vendored examples from anthropics/claude-code-playground.",
+  "description": "Custom Claude Code mods, a vendored example from anthropics/claude-code-playground, and pinned releases of mods from other repos.",
   "plugins": [
     {
-      "name": "blast-radius",
-      "source": "./mods/blast-radius",
-      "description": "Holds risky shell commands and shows what they would change, with Proceed and Cancel buttons."
-    },
-    {
-      "name": "replay-theater",
-      "source": "./mods/replay-theater",
-      "description": "Step through the file edits Claude made in the last turn, one diff at a time."
+      "name": "filetree",
+      "source": {
+        "source": "github",
+        "repo": "data-goblin/claude-code-filetree",
+        "ref": "v0.8.0",
+        "sha": "2b42d0faf7072a77055cb1fb930ed05f0639256d"
+      },
+      "description": "An IDE-style file tree pane with git status, lines changed, and a shimmer on the files Claude reads and writes. Pinned to an upstream release. Needs Claude Code 2.1.306+."
     },
     {
       "name": "token-weather",
