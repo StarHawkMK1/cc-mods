@@ -1,0 +1,65 @@
+import { expect, test } from 'claude-code/testing'
+import type { Engine, On } from 'claude-code/testing'
+
+const PLUGIN = 'token-weather'
+const SURFACES = ['terminal', 'desktop'] as const
+type Surface = (typeof SURFACES)[number]
+const BAND = { hasSurvey: false, isWorking: false, maxRows: 8, bodyColumns: 100, scroll: { offset: 0, bodyRows: 8 }, view: {} }
+
+// Beneath the mod: a context reading, and either another mod's band or Claude Code's placeholder.
+function world(on: On, other: string | null) {
+  on('session.start', async () => ({ cwd: '/repo' }) as never)
+  on('session.usage', () => ({ value: { startedAt: 0, context: { tokens: 68_200, window: 1_000_000, percent: 7 }, rateLimits: [] } }) as never)
+  on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
+    if (other === null) return next(e)
+    const { Text } = $.ui.resolve(e)
+    return Text({ children: other }) as never
+  })
+}
+
+const start = ($: Engine) => $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true } as never)
+
+// The band's Text runs joined; null when the mod draws nothing there.
+async function band($: Engine, surface: Surface, props: object = BAND): Promise<string | null> {
+  try {
+    const ui = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: props as never })
+    const texts = await ui.findAll({ type: 'Text' })
+    await ui.unmount()
+    return texts.map(t => t.text).join(' | ')
+  } catch (err) {
+    if (/drew nothing/.test(String(err))) return null
+    throw err
+  }
+}
+
+for (const surface of SURFACES) {
+  test(`${surface}: another mod's band draws beneath the forecast`, async ($, on) => {
+    world(on, 'OTHER BAND')
+    await start($)
+    const text = await band($, surface)
+    expect(text).toContain('Clear')
+    expect(text).toContain('OTHER BAND')
+    expect(text!.indexOf('Clear')).toBeLessThan(text!.indexOf('OTHER BAND'))
+  })
+
+  test(`${surface}: alone, the forecast draws without the placeholder`, async ($, on) => {
+    world(on, null)
+    await start($)
+    expect(await band($, surface)).toContain('7% of context')
+  })
+}
+
+test('a survey holds the band: the forecast steps aside', async ($, on) => {
+  world(on, 'OTHER BAND')
+  await start($)
+  const text = await band($, 'terminal', { ...BAND, hasSurvey: true })
+  expect(text).not.toContain('Clear')
+  expect(text).toContain('OTHER BAND')
+})
+
+test('a narrow band drops the chart', async ($, on) => {
+  world(on, null)
+  await start($)
+  expect(await band($, 'terminal', { ...BAND, bodyColumns: 50 })).not.toContain('last turns')
+  expect(await band($, 'terminal')).toContain('last turns')
+})

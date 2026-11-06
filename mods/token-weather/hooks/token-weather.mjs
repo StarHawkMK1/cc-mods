@@ -1,5 +1,6 @@
 // Copyright 2026 Anthropic PBC
 // SPDX-License-Identifier: Apache-2.0
+// Modified in cc-mods (see THIRD_PARTY_NOTICES.md): other mods' bands draw beneath this one.
 //
 // Token Weather: a live forecast of the context window, above the prompt.
 //
@@ -8,7 +9,8 @@
 // the last HISTORY readings.
 // session.start: take a first reading, so the band shows before any turn.
 // ui.render (AbovePrompt): one line: icon, forecast word, percent, tokens
-// used of the window, and a block-character chart of the recent turns.
+// used of the window, and a block-character chart of the recent turns, with
+// the other mods' bands beneath it.
 //
 // The host reads on(...) and $.noun.method(...) from source, so they are
 // spelled literally, and helpers that take $ are top-level functions.
@@ -46,13 +48,21 @@ export function register(on) {
     return result;
   });
 
-  on("ui.render", { component: "AbovePrompt" }, ($, e, next) => {
-    if (e.hasSurvey || readings.length === 0) {
+  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
+    if (e.props.hasSurvey || readings.length === 0) {
       return next(e);
     }
     const { Box, Text } = $.ui.resolve(e);
-    return band(Box, Text, e.bodyColumns ?? 80);
+    const below = await beneath(e, next);
+    return Box({ flexDirection: "column", children: [band(Box, Text, e.props.bodyColumns ?? 80), below] });
   });
+}
+
+// Other mods' bands draw beneath this one. Claude Code's own placeholder
+// ({ type: "engine" }) is never nested: the desktop drops a band that nests it.
+async function beneath(e, next) {
+  const drawn = await Promise.resolve(next(e)).catch(() => null);
+  return drawn && typeof drawn === "object" && drawn.type !== "engine" ? drawn : null;
 }
 
 async function takeReading($) {

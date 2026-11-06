@@ -12,7 +12,7 @@
 | --- | --- | --- | --- |
 | `mods/blast-radius/` | `claude-code/mods/blast-radius/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 수정 없음 |
 | `mods/replay-theater/` | `claude-code/mods/replay-theater/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 수정 없음 |
-| `mods/token-weather/` | `claude-code/mods/token-weather/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 수정 없음 |
+| `mods/token-weather/` | `claude-code/mods/token-weather/` | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86` | 입력창 위 밴드에서 다른 mod의 밴드를 그 아래에 이어 그림, `hasSurvey`/`bodyColumns`를 `e.props`에서 읽음, 테스트 추가 |
 
 ## johnnyvizz/claude-kit
 
