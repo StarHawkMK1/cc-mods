@@ -128,6 +128,8 @@ async function restore($: EngineInterface, skills: readonly string[], tests: rea
 }
 
 export const register: Register = (on, options) => {
+  // "Enabled" off (the switch-board panel flips it): no hook at all, so the mod does nothing anywhere.
+  if (options.enabled === 'off') return
   // More command prefixes that count as a test run, from the plugin's settings.
   const testCommands = parseList(options.testCommands)
   // Which other skills the band shows, from the plugin's settings; empty shows all.

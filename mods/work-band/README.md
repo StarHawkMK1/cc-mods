@@ -31,6 +31,8 @@
 
 `language`: `auto`(기본, Claude Code `language` 설정 → 시스템 로캘), `en`, `ko`. `/config`에서 바꾸거나, 폴더에서 바로 불러온 mod라면 `~/.claude/settings.json`에 씁니다.
 
+`enabled`(Enabled): `on`(기본)이면 동작하고, `off`면 훅을 하나도 달지 않아 어느 화면에서도 막대·패널·`/work-band`가 없습니다. `switch-board` 패널이 이 값을 바꿉니다.
+
 `terminal`(Show in terminal): `off`(기본)면 막대와 에이전트 패널을 데스크톱 앱(과 다른 앱 화면)에서만 그리고 터미널에서는 그리지 않습니다. `on`이면 터미널에도 그립니다. 꺼진 터미널에서 `/work-band`를 입력하면 켜는 방법을 알려 줍니다. 기록은 터미널에서도 계속 쌓이므로, 데스크톱 앱에서 이어 보면 그대로 나옵니다.
 
 `skills`: superpowers 외에 띄울 스킬을 쉼표로 적습니다. 이름 전체(`impeccable`)나 플러그인 접두어(`taste-skill:`)를 쓰고, 비우면(기본) 모두 띄웁니다.

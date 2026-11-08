@@ -10,6 +10,7 @@ Claude Code [mods](https://code.claude.com/docs/en/plugins/mods/overview)를 모
 | mod | 하는 일 | 출처 |
 | --- | --- | --- |
 | [`filetree`](https://github.com/data-goblin/claude-code-filetree) | IDE처럼 파일 트리를 옆 창(pane)에 띄웁니다. git 상태, 바뀐 줄 수, Claude가 읽고 쓰는 파일의 반짝임, 검색, 미리보기, diff. `/filetree`로 열고 닫습니다. | 외부 참조 (data-goblin, MIT) |
+| [`switch-board`](mods/switch-board/) | 데스크톱 앱 오른쪽 패널에서 이 저장소의 mod를 켜고 끕니다. `work-band`·`token-weather`는 바로, `filetree`는 다음 세션부터 적용됩니다. 터미널에서는 그리지 않습니다. `/switch-board`로 열고 닫습니다. | 직접 작성 |
 | [`token-weather`](mods/token-weather/) | 프롬프트 위에 컨텍스트 윈도우 사용량을 날씨 아이콘과 그래프로 보여 줍니다. | Anthropic 샘플 |
 | [`work-band`](mods/work-band/) | 프롬프트 위 한 줄 진행 막대: superpowers 흐름 단계, 다른 스킬, Claude의 할 일 진행, 마지막 테스트 결과(빨강/초록), 요청 경과 시간, 실행 중인 서브에이전트 수. 누르면 에이전트 패널(모델, 컨텍스트, 예상 비용, 시간). resume 때 흐름을 되살립니다. 토큰을 더 쓰지 않습니다. | 직접 작성 (savvy-progress 일부 차용, MIT) |
 
@@ -18,6 +19,7 @@ Claude Code [mods](https://code.claude.com/docs/en/plugins/mods/overview)를 모
 "외부 참조"는 파일을 이 저장소에 복사하지 않고, 원래 저장소의 릴리스 태그와 커밋을 [`marketplace.json`](.claude-plugin/marketplace.json)에 고정해 받는 mod입니다. 설치하면 그 커밋의 코드가 원래 저장소에서 그대로 내려옵니다. 업데이트 방법은 [외부 mod 업데이트](#외부-mod-업데이트)에 있습니다.
 
 - `work-band`와 `token-weather`는 기본값으로 **데스크톱 앱(과 다른 앱 화면)에서만** 보이고 터미널에서는 그리지 않습니다. 터미널에서도 보려면 `/config`에서 그 mod의 **Show in terminal**을 `on`으로 바꿉니다. `filetree`는 외부 mod라 이 설정이 없습니다.
+- `work-band`와 `token-weather`는 `/config`의 **Enabled**를 `off`로 바꾸면 어느 화면에서도 아무것도 하지 않습니다. `switch-board` 패널의 버튼이 이 값을 바꿉니다.
 - `filetree`는 기본값으로 세션을 시작할 때 창이 열리고, Claude가 다른 저장소에서 몇 분 동안 계속 작업하면 세션을 그쪽으로 `/cd`합니다("Follow work"). 원하지 않으면 `/config`의 filetree 항목에서 **Open at start**, **Follow work**를 `off`로 바꿉니다.
 
 ## 설치
@@ -39,6 +41,7 @@ claude plugin marketplace add StarHawkMK1/cc-mods
 claude plugin install work-band@cc-mods --scope user
 claude plugin install token-weather@cc-mods --scope user
 claude plugin install filetree@cc-mods --scope user
+claude plugin install switch-board@cc-mods --scope user
 ```
 
 첫 줄은 마켓플레이스를 한 번만 등록하고, 그다음 줄들이 원하는 mod를 설치합니다. 이미 열려 있는 세션에서는 `/reload-plugins`를 실행해야 반영됩니다.
@@ -53,7 +56,7 @@ claude plugin install filetree@cc-mods --scope user
 
 | 하고 싶은 것 | 방법 |
 | --- | --- |
-| mod 켜고 끄기 | `/plugin` → **Installed** 탭에서 Space, 또는 `claude plugin disable <mod>@cc-mods` / `enable` |
+| mod 켜고 끄기 | 데스크톱 앱의 `switch-board` 패널, 또는 `/plugin` → **Installed** 탭에서 Space, 또는 `claude plugin disable <mod>@cc-mods` / `enable` |
 | 지금 바로 업데이트 | `claude plugin update <mod>@cc-mods` 후 세션에서 `/reload-plugins` |
 | 터미널에서도 보기 | `/config` → `work-band`·`token-weather`의 **Show in terminal**을 `on` (기본 `off`: 데스크톱 앱에서만 보임) |
 | 로드 확인 | `/plugin`을 열면 흐린 줄에 `N mods active`가 표시됩니다 |

@@ -1,0 +1,19 @@
+{
+  "name": "switch-board",
+  "version": "0.1.0",
+  "description": "A side panel in the desktop app that turns the cc-mods mods on and off: at once for a mod with an Enabled setting, from the next session for the rest.",
+  "author": {
+    "name": "StarHawkMK1"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "auto follows Claude Code's language setting, then the system locale; en or ko",
+      "default": "auto",
+      "options": ["auto", "en", "ko"]
+    }
+  },
+  "license": "Apache-2.0"
+}

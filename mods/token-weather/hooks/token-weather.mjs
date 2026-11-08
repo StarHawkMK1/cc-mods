@@ -1,7 +1,7 @@
 // Copyright 2026 Anthropic PBC
 // SPDX-License-Identifier: Apache-2.0
 // Modified in cc-mods (see THIRD_PARTY_NOTICES.md): other mods' bands draw beneath this one,
-// and the band stays off the terminal unless the "Show in terminal" option is on.
+// the band stays off the terminal unless the "Show in terminal" option is on, and "Enabled" off turns it off.
 //
 // Token Weather: a live forecast of the context window, above the prompt.
 //
@@ -33,6 +33,8 @@ const FORECAST = [
 let readings = [];
 
 export function register(on, options = {}) {
+  // "Enabled" off (the switch-board panel flips it): no hook at all, so the band draws nowhere.
+  if (options.enabled === "off") return;
   // Off (the default) draws the band in the desktop app and other app surfaces alone.
   const isHiddenOn = (surface) => surface === "terminal" && options.terminal !== "on";
 

@@ -16,6 +16,11 @@
       "description": "An IDE-style file tree pane with git status, lines changed, and a shimmer on the files Claude reads and writes. Pinned to an upstream release. Needs Claude Code 2.1.306+."
     },
     {
+      "name": "switch-board",
+      "source": "./mods/switch-board",
+      "description": "A side panel in the desktop app that turns the cc-mods mods on and off: at once for a mod with an Enabled setting, from the next session for the rest."
+    },
+    {
       "name": "token-weather",
       "source": "./mods/token-weather",
       "description": "A live forecast of the context window, drawn above the prompt."

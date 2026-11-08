@@ -1,12 +1,19 @@
 {
   "name": "work-band",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "A one-line band above the prompt: the stage and progress of a superpowers flow, another skill or Claude's own to-do list; the last test run; the request's time; and how many subagents are running. Comes back on resume.",
   "author": {
     "name": "StarHawkMK1"
   },
   "types": "./types/index.d.ts",
   "userConfig": {
+    "enabled": {
+      "type": "string",
+      "title": "Enabled",
+      "description": "on (default) runs the mod; off turns it off everywhere, on every surface (the switch-board panel flips this)",
+      "default": "on",
+      "options": ["on", "off"]
+    },
     "language": {
       "type": "string",
       "title": "Language",

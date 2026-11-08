@@ -74,3 +74,13 @@ test('off (the default): the forecast stays off the terminal and draws on the de
   expect(terminal).toContain('OTHER BAND')
   expect(await band($, 'desktop')).toContain('Clear')
 })
+
+test('enabled off: no forecast on any surface, other bands still draw', { options: { enabled: 'off', terminal: 'on' } }, async ($, on) => {
+  world(on, 'OTHER BAND')
+  await start($)
+  for (const surface of SURFACES) {
+    const text = await band($, surface)
+    expect(text).not.toContain('Clear')
+    expect(text).toContain('OTHER BAND')
+  }
+})

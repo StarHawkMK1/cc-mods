@@ -46,3 +46,14 @@ test('on: the band draws on the terminal too', { options: { terminal: 'on' } }, 
   ])
   expect(await band($, 'terminal')).toContain('1/2')
 })
+
+// "Enabled" off (the switch-board panel flips it): nothing on any surface, no command.
+test('enabled off: no band and no panel on any surface', { options: { enabled: 'off', terminal: 'on' } }, async ($, on) => {
+  world(on)
+  await todoWrite($, [
+    { content: 'A', status: 'completed' },
+    { content: 'B', status: 'pending' },
+  ])
+  expect(await band($, 'terminal')).toBeNull()
+  expect(await band($, 'desktop')).toBeNull()
+})
