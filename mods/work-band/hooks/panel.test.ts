@@ -1,7 +1,7 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import { BAND, PANE, PANE_PROPS, PLUGIN, finish, spawn, todoWrite, world } from './test-world'
+import { BAND, PANE, PANE_PROPS, PLUGIN, finish, spawn, todoWrite, world, test } from './test-world'
 
 const pane = async ($: Engine, surface: 'terminal' | 'desktop') => {
   const ui = await $.ui.mount({ plugin: PLUGIN, surface, component: 'Pane', requestId: PANE, props: PANE_PROPS })

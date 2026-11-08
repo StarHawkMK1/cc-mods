@@ -26,6 +26,7 @@ const en = {
   isFinished: 'finished',
   opened: 'Agents panel opened.',
   closed: 'Agents panel closed.',
+  hiddenInTerminal: 'work-band is off in the terminal. Turn on "Show in terminal" in /config to see it here.',
 }
 
 export type Strings = typeof en
@@ -54,6 +55,7 @@ const ko: Strings = {
   isFinished: '끝남',
   opened: '에이전트 패널을 열었습니다.',
   closed: '에이전트 패널을 닫았습니다.',
+  hiddenInTerminal: '터미널에서는 work-band가 꺼져 있습니다. /config에서 "Show in terminal"을 on으로 바꾸면 여기서도 보입니다.',
 }
 
 export const STRINGS: Record<Lang, Strings> = { en, ko }

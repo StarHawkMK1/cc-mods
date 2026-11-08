@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { BAND, PLUGIN, SURFACES, band, bash, endTurn, skill, slash, spawn, submit, todoWrite, world } from './test-world'
+import { BAND, PLUGIN, SURFACES, band, bash, endTurn, skill, slash, spawn, submit, todoWrite, world, test } from './test-world'
 
 const TODOS = [
   { content: 'Write the parser', status: 'completed', activeForm: 'Writing the parser' },

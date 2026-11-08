@@ -17,6 +17,7 @@ Claude Code [mods](https://code.claude.com/docs/en/plugins/mods/overview)를 모
 
 "외부 참조"는 파일을 이 저장소에 복사하지 않고, 원래 저장소의 릴리스 태그와 커밋을 [`marketplace.json`](.claude-plugin/marketplace.json)에 고정해 받는 mod입니다. 설치하면 그 커밋의 코드가 원래 저장소에서 그대로 내려옵니다. 업데이트 방법은 [외부 mod 업데이트](#외부-mod-업데이트)에 있습니다.
 
+- `work-band`와 `token-weather`는 기본값으로 **데스크톱 앱(과 다른 앱 화면)에서만** 보이고 터미널에서는 그리지 않습니다. 터미널에서도 보려면 `/config`에서 그 mod의 **Show in terminal**을 `on`으로 바꿉니다. `filetree`는 외부 mod라 이 설정이 없습니다.
 - `filetree`는 기본값으로 세션을 시작할 때 창이 열리고, Claude가 다른 저장소에서 몇 분 동안 계속 작업하면 세션을 그쪽으로 `/cd`합니다("Follow work"). 원하지 않으면 `/config`의 filetree 항목에서 **Open at start**, **Follow work**를 `off`로 바꿉니다.
 
 ## 설치
@@ -54,6 +55,7 @@ claude plugin install filetree@cc-mods --scope user
 | --- | --- |
 | mod 켜고 끄기 | `/plugin` → **Installed** 탭에서 Space, 또는 `claude plugin disable <mod>@cc-mods` / `enable` |
 | 지금 바로 업데이트 | `claude plugin update <mod>@cc-mods` 후 세션에서 `/reload-plugins` |
+| 터미널에서도 보기 | `/config` → `work-band`·`token-weather`의 **Show in terminal**을 `on` (기본 `off`: 데스크톱 앱에서만 보임) |
 | 로드 확인 | `/plugin`을 열면 흐린 줄에 `N mods active`가 표시됩니다 |
 | 전부 제거 | `claude plugin marketplace remove cc-mods` (이 마켓플레이스에서 설치한 mod가 모두 제거됨) |
 

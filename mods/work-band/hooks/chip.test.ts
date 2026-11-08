@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { BAND, PLUGIN, SURFACES, band, bash, skill, submit, todoWrite, world } from './test-world'
+import { BAND, PLUGIN, SURFACES, band, bash, skill, submit, todoWrite, world, test } from './test-world'
 
 const TODOS = [{ content: 'Fix the parser', status: 'in_progress', activeForm: 'Fixing the parser' }]
 const FAILED = { isError: true, result: 'Exit code 1\n3 failed' }

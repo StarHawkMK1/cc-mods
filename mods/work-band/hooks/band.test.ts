@@ -1,6 +1,6 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
 
-import { BAND, PANE, PLUGIN, SURFACES, band, finish, spawn, submit, taskCreate, taskUpdate, todoWrite, world } from './test-world'
+import { BAND, PANE, PLUGIN, SURFACES, band, finish, spawn, submit, taskCreate, taskUpdate, todoWrite, world, test } from './test-world'
 
 for (const surface of SURFACES) {
   test(`${surface}: with nothing to show the band stays empty`, async ($, on) => {

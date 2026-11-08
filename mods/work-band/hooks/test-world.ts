@@ -1,6 +1,13 @@
 import type { On } from 'claude-code'
-import { mock } from 'claude-code/testing'
-import type { Engine } from 'claude-code/testing'
+import { mock, test as kitTest } from 'claude-code/testing'
+import type { Engine, TestBody, TestOptions } from 'claude-code/testing'
+
+// The kit's test with "Show in terminal" on, so a body runs the same on every surface;
+// a test's own options win. hidden.test.ts covers the default, off.
+export function test(name: string, ...rest: readonly [TestBody] | readonly [TestOptions, TestBody]) {
+  const [opts, body] = rest.length === 1 ? [{}, rest[0]] : rest
+  kitTest(name, { ...opts, options: { terminal: 'on', ...opts.options } }, body)
+}
 
 export const PLUGIN = 'work-band'
 export const PANE = 'work-band-agents'
@@ -16,6 +23,8 @@ export function world(on: On, now = 1_000, files: Record<string, string> = {}) {
   on('ui.render', () => ({ type: 'engine', ref: 0 }) as never)
   let panes: { id: string; title: string }[] = []
   on('ui.panes', () => ({ value: panes }) as never)
+  let surfaces: string[] = ['terminal']
+  on('session.surfaces', () => ({ value: surfaces }) as never)
   on('ui.open', (_$, e) => {
     const { id, title } = e as { id: string; title?: string }
     panes = [...panes.filter(p => p.id !== id), { id, title: title ?? '' }]
@@ -49,6 +58,10 @@ export function world(on: On, now = 1_000, files: Record<string, string> = {}) {
   return {
     clock,
     panes: () => panes,
+    // The surfaces the session draws on from now on.
+    drawOn: (list: string[]) => {
+      surfaces = list
+    },
     // What the Bash tool answers for that command from now on.
     answerBash: (command: string, answer: unknown) => {
       bashAnswers = { ...bashAnswers, [command]: answer }

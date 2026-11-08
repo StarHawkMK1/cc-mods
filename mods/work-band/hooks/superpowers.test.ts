@@ -1,6 +1,6 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
 
-import { BAND, PLUGIN, SURFACES, band, endTurn, skill, slash, submit, todoWrite, world, write } from './test-world'
+import { BAND, PLUGIN, SURFACES, band, endTurn, skill, slash, submit, todoWrite, world, write, test } from './test-world'
 
 const PLAN = [
   '# Auth login Implementation Plan',

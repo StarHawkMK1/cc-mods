@@ -1,6 +1,6 @@
 {
   "name": "work-band",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A one-line band above the prompt: the stage and progress of a superpowers flow, another skill or Claude's own to-do list; the last test run; the request's time; and how many subagents are running. Comes back on resume.",
   "author": {
     "name": "StarHawkMK1"
@@ -25,6 +25,13 @@
       "title": "Test commands",
       "description": "More command prefixes that count as a test run, comma-separated (for example: just test, ./run-tests.sh)",
       "default": ""
+    },
+    "terminal": {
+      "type": "string",
+      "title": "Show in terminal",
+      "description": "off (default) draws the band and the agents panel only in the desktop app (and other app surfaces); on draws them in the terminal too",
+      "default": "off",
+      "options": ["off", "on"]
     }
   },
   "license": "Apache-2.0"

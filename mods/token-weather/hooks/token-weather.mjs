@@ -1,6 +1,7 @@
 // Copyright 2026 Anthropic PBC
 // SPDX-License-Identifier: Apache-2.0
-// Modified in cc-mods (see THIRD_PARTY_NOTICES.md): other mods' bands draw beneath this one.
+// Modified in cc-mods (see THIRD_PARTY_NOTICES.md): other mods' bands draw beneath this one,
+// and the band stays off the terminal unless the "Show in terminal" option is on.
 //
 // Token Weather: a live forecast of the context window, above the prompt.
 //
@@ -31,7 +32,10 @@ const FORECAST = [
 // Readings: { tokens, window, percent }, oldest first.
 let readings = [];
 
-export function register(on) {
+export function register(on, options = {}) {
+  // Off (the default) draws the band in the desktop app and other app surfaces alone.
+  const isHiddenOn = (surface) => surface === "terminal" && options.terminal !== "on";
+
   on("session.start", async ($, e, next) => {
     const result = await next(e);
     readings = [];
@@ -49,7 +53,7 @@ export function register(on) {
   });
 
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
-    if (e.props.hasSurvey || readings.length === 0) {
+    if (e.props.hasSurvey || readings.length === 0 || isHiddenOn(e.surface)) {
       return next(e);
     }
     const { Box, Text } = $.ui.resolve(e);

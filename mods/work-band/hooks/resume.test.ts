@@ -1,8 +1,8 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
 import type { On } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
 
-import { BAND, PLUGIN, SURFACES, band, todoWrite, world } from './test-world'
+import { BAND, PLUGIN, SURFACES, band, todoWrite, world, test } from './test-world'
 import { TRANSCRIPT } from './transcript-fixture'
 
 const sessionStart = (source: string) => ($: Engine) =>

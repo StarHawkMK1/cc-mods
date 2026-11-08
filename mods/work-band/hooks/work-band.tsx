@@ -132,6 +132,8 @@ export const register: Register = (on, options) => {
   const testCommands = parseList(options.testCommands)
   // Which other skills the band shows, from the plugin's settings; empty shows all.
   const skills = parseList(options.skills)
+  // Off (the default) keeps the band and the panel off the terminal: they draw in the apps alone.
+  const isHiddenOn = (surface: string) => surface === 'terminal' && options.terminal !== 'on'
 
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -360,7 +362,7 @@ export const register: Register = (on, options) => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey) return next(e)
+    if (e.props.hasSurvey || isHiddenOn(e.surface)) return next(e)
     const s = tr()
     const w = await read($, work)
     const list = await read($, agents)
@@ -431,11 +433,15 @@ export const register: Register = (on, options) => {
   })
 
   on('command.run', { command: 'work-band' }, async $ => {
+    // A terminal alone has nowhere to show the panel.
+    const surfaces = await $.session.surfaces()
+    if (surfaces.length > 0 && surfaces.every(isHiddenOn)) return { text: tr().hiddenInTerminal }
     const isOpen = await togglePane($)
     return { text: isOpen ? tr().opened : tr().closed }
   })
 
-  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
+    if (isHiddenOn(e.surface)) return next(e)
     const s = tr()
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui
