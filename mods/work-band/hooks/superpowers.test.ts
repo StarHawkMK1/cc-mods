@@ -1,6 +1,6 @@
 import { expect, mock } from 'claude-code/testing'
 
-import { BAND, PLUGIN, SURFACES, band, endTurn, skill, slash, submit, todoWrite, world, write, test } from './test-world'
+import { BAND, PLUGIN, SURFACES, band, endTurn, finish, skill, slash, spawn, submit, todoWrite, world, write, test } from './test-world'
 
 const PLAN = [
   '# Auth login Implementation Plan',
@@ -26,24 +26,68 @@ for (const surface of SURFACES) {
     await write($, 'docs/superpowers/specs/2026-10-15-auth-design.md', '# Auth redesign 설계\n')
     shown = await band($, surface)
     expect(shown).toContain('Spec')
-    expect(shown).toContain('17%')
+    expect(shown).toContain('9%')
 
     await skill($, 'superpowers:writing-plans', 'docs/superpowers/specs/2026-10-15-auth-design.md')
-    expect(await band($, surface)).toContain('33%')
+    expect(await band($, surface)).toContain('18%')
 
     await write($, 'docs/superpowers/plans/2026-10-15-auth.md', PLAN)
     await skill($, 'superpowers:subagent-driven-development')
     shown = await band($, surface)
     expect(shown).toContain('Auth login')
     expect(shown).toContain('Build 0/7')
-    expect(shown).toContain('50%')
+    expect(shown).toContain('27%')
 
     await todoWrite($, buildTodos(3))
     shown = await band($, surface)
     expect(shown).toContain('Build 3/7')
-    expect(shown).toContain('57%')
+    expect(shown).toContain('51%')
+
+    await todoWrite($, buildTodos(7))
+    shown = await band($, surface)
+    expect(shown).toContain('Build 7/7')
+    expect(shown).toContain('82%')
+
+    await skill($, 'superpowers:requesting-code-review')
+    expect(await band($, surface)).toContain('82%')
+    await skill($, 'superpowers:finishing-a-development-branch')
+    expect(await band($, surface)).toContain('91%')
   })
 }
+
+// The bug: Build held the bar between 50% and 67%, and a new request dropped
+// the finished list, so the band sat at 50% for most of a flow.
+test('a new request keeps the finished list a flow under way still counts', async ($, on) => {
+  world(on)
+  await skill($, 'superpowers:executing-plans')
+  await todoWrite($, buildTodos(7))
+  await endTurn($)
+  await submit($, 'now review it')
+  const shown = await band($, 'terminal')
+  expect(shown).toContain('Build 7/7')
+  expect(shown).toContain('82%')
+})
+
+test('a finished list still goes once the flow is over', async ($, on) => {
+  world(on)
+  await todoWrite($, buildTodos(7))
+  await endTurn($)
+  await submit($, 'something else')
+  expect(await band($, 'terminal')).toBeNull()
+})
+
+test('Build without a plan or a list fills by this request’s subagents', async ($, on) => {
+  world(on)
+  await skill($, 'superpowers:subagent-driven-development')
+  expect(await band($, 'terminal')).toContain('27%')
+  await spawn($, '1')
+  await spawn($, '2')
+  await finish($, '1')
+  const shown = await band($, 'terminal')
+  expect(shown).toContain('Build 1/2')
+  // 3/11 + 6/11 × 1/2 = 6/11
+  expect(shown).toContain('55%')
+})
 
 test('a plan handed to the executing skill is read for its task count', async ($, on) => {
   world(on, 1_000, { 'docs/superpowers/plans/2026-10-15-auth.md': PLAN })

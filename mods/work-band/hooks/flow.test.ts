@@ -166,17 +166,20 @@ test('plan helpers', () => {
 
 const s = STRINGS.en
 
-test('flowBar: six stages, Build filled by tasks done', () => {
+test('flowBar: six weighted stages, Build filled by tasks done', () => {
   const todos = [todo('1', 'completed'), todo('2', 'completed'), todo('3', 'completed'), { id: '4', title: 'T4', activeForm: 'Doing 4', status: 'in_progress' as const }]
   const spec = flowBar({ stage: 'spec', isFinished: false, topic: 'Auth' }, [], s)
   expect(spec).toMatchObject({ title: 'Auth', pill: 'Spec', isFlow: true, isFinished: false })
-  expect(Math.round(spec.ratio * 100)).toBe(17)
-  expect(Math.round(spec.runRatio * 1e4)).toBe(Math.round((2 / 6) * 1e4))
-  expect(spec.ticks).toHaveLength(5)
+  expect(Math.round(spec.ratio * 100)).toBe(9)
+  expect(Math.round(spec.runRatio * 1e4)).toBe(Math.round((2 / 11) * 1e4))
+  expect(spec.ticks.map(t => Math.round(t * 11))).toEqual([1, 2, 3, 9, 10])
   const build = flowBar({ stage: 'build', isFinished: false, topic: 'Auth', specTitle: 'Auth spec', planTitle: 'Auth plan', planTasks: 7 }, todos, s)
   expect(build).toMatchObject({ title: 'Auth plan', pill: 'Build 3/7', doing: 'Doing 4' })
-  expect(Math.round(build.ratio * 100)).toBe(57)
-  expect(Math.round(build.runRatio * 1e4)).toBe(Math.round(((3 + 4 / 7) / 6) * 1e4))
+  expect(Math.round(build.ratio * 100)).toBe(Math.round(((3 + (6 * 3) / 7) / 11) * 100))
+  expect(Math.round(build.runRatio * 1e4)).toBe(Math.round(((3 + (6 * 4) / 7) / 11) * 1e4))
+  // Build spans 27%..82%: the bulk of the bar, not 50%..67%.
+  expect(Math.round(flowBar({ stage: 'build', isFinished: false, planTasks: 7 }, [], s).ratio * 100)).toBe(27)
+  expect(Math.round(flowBar({ stage: 'review', isFinished: false }, [], s).ratio * 100)).toBe(82)
   expect(flowBar({ stage: 'build', isFinished: false }, todos, s).pill).toBe('Build 3/4')
   expect(flowBar({ stage: 'build', isFinished: false }, [], s)).toMatchObject({ pill: 'Build', title: 'superpowers' })
   expect(flowBar({ stage: 'finish', isFinished: true }, [], s)).toMatchObject({ pill: 'Done', ratio: 1, isFinished: true })

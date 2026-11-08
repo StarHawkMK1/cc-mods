@@ -1,6 +1,6 @@
 {
   "name": "work-band",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A one-line band above the prompt: the stage and progress of a superpowers flow, another skill or Claude's own to-do list; the last test run; the request's time; and how many subagents are running. Comes back on resume.",
   "author": {
     "name": "StarHawkMK1"

@@ -1,6 +1,6 @@
 import type { Work } from '../types'
 import { onFile, onMainTurnEnd, onRequest, onSkill, onTaskCreate, onTaskUpdate, onTest, onTodoWrite } from './events'
-import { blankWork, mdPathOf, skillStage, type TaskUpdateInput } from './flow'
+import { blankWork, keepsList, mdPathOf, skillStage, type TaskUpdateInput } from './flow'
 import { testVerdict } from './tests'
 
 // A resumed or branched session starts with empty state: its transcript, read
@@ -83,13 +83,13 @@ export const replay = (messages: unknown, o: ReplayOptions): { work: Work; planP
     else if (s.tool === 'TaskCreate') w = onTaskCreate(w, undefined, (s.result as { task?: { id?: unknown } } | undefined)?.task?.id, s.input.subject, s.input.activeForm)
     else if (s.tool === 'TaskUpdate') w = onTaskUpdate(w, undefined, s.input as TaskUpdateInput)
   }
-  // Only what outlives a request: the flow, an unfinished list, and the test result while the flow is under way.
+  // Only what outlives a request: the flow, a list it still counts or an unfinished one, and the test result while the flow is under way.
   const flow = w.flow
   const isLive = !!flow && !flow.isFinished
   const work: Work = {
     ...blankWork(),
     flow,
-    todos: w.todos.every(t => t.status === 'completed') ? [] : w.todos,
+    todos: keepsList(flow, w.todos) ? w.todos : [],
     since: o.at,
     isReplayed: true,
     ...(isLive && w.test ? { test: w.test } : {}),

@@ -3,7 +3,7 @@
 프롬프트 입력창 위에 한 줄짜리 진행 막대를 띄웁니다. 지금 작업의 단계와 진행 상황, 그리고 실행 중인 서브에이전트 수를 보여 줍니다. 이미 일어나는 스킬 호출, 할 일 목록, 파일 쓰기, 서브에이전트 이벤트를 읽기만 하므로 토큰을 더 쓰지 않습니다.
 
 ```text
-● Auth login   ▓▓▓▓▓▓▓▓▓▓[ Build 3/7 ]░░│░░░│░░   57%   ✓ tests   2:13   🦀 ×2   ✕
+● Auth login   ▓▓▓▓▓▓▓▓[ Build 3/7 ]░░░░░│░│░   51%   ✓ tests   2:13   🦀 ×2   ✕
 ```
 
 ## 설치
@@ -16,7 +16,7 @@
 
 ## 무엇을 보여 주나
 
-- **superpowers 흐름**: `brainstorming` → spec 문서 → `writing-plans` → 구현(`subagent-driven-development`, `executing-plans`, `test-driven-development`) → `requesting-code-review` → `finishing-a-development-branch`를 6칸 눈금으로 보여 줍니다. 구현 칸은 계획의 작업 수 중 끝난 수만큼 채워집니다. 제목은 plan, spec 문서 제목, brainstorming 주제 순입니다.
+- **superpowers 흐름**: `brainstorming` → spec 문서 → `writing-plans` → 구현(`subagent-driven-development`, `executing-plans`, `test-driven-development`) → `requesting-code-review` → `finishing-a-development-branch`를 6칸 눈금으로 보여 줍니다. 일이 가장 많은 구현 칸이 막대의 절반 이상(27%~82%)을 차지하고, 계획의 작업 수 중 끝난 수만큼 채워집니다. 계획도 할 일 목록도 없으면 이번 요청의 서브에이전트 중 끝난 수로 채웁니다. 흐름이 진행 중이면 끝난 할 일 목록은 다음 요청에도 남아 구현 진행을 그대로 보여 줍니다. 제목은 plan, spec 문서 제목, brainstorming 주제 순입니다.
 - **하네스만 쓸 때**: Claude의 할 일 목록(`Tasks 3/5`), 목록이 없으면 이번 요청의 서브에이전트(`Agents 1/2`)를 보여 줍니다. 간단한 요청에는 막대가 뜨지 않습니다.
 - **다른 스킬**: superpowers가 아닌 스킬(예: `impeccable`, `taste-skill:…`, `docs-system:wrapup`)을 모델이 부르거나 슬래시로 입력하면 막대 제목에 스킬 이름이 뜹니다. 진행은 할 일 목록, 없으면 이번 요청의 서브에이전트, 둘 다 없으면 `Running` → `Done`입니다. 설정 `skills`로 띄울 스킬을 고릅니다.
 - **테스트 칩**: 가장 최근 테스트 실행(메인과 서브에이전트)이 실패면 빨강 `✗ tests`, 통과면 초록 `✓ tests`입니다. `npm test`, `pytest`, `go test`, `cargo test`, `claude plugin test` 같은 명령을 알아보고, `| tail`처럼 종료 코드가 테스트의 것이 아니면 출력의 요약 줄로 판정합니다. superpowers 흐름 안에서는 요청이 바뀌어도 남습니다.
