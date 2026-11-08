@@ -2,7 +2,7 @@
 
 Claude Code [mods](https://code.claude.com/docs/en/plugins/mods/overview)를 모아 두는 저장소입니다. 이 저장소 자체가 Claude Code 플러그인 마켓플레이스(`cc-mods`)라서, mod를 한 줄로 설치하고 자동 업데이트로 받을 수 있습니다.
 
-- 요구 버전: Claude Code **2.1.287 이상**, `filetree`는 **2.1.306 이상** (테스트: `token-weather`·`filetree` 2.1.318, `work-band` 2.1.299~2.1.301, Windows 11 / Git Bash)
+- 요구 버전: Claude Code **2.1.287 이상**, `filetree`는 **2.1.306 이상** (테스트: `token-weather`·`filetree` 2.1.318, `work-band` 2.1.299~2.1.301, Windows 11 / Git Bash; `work-band`의 `claude plugin test`는 2.1.318·2.1.319 Linux에서도 통과)
 - mod는 샌드박스 없이 **사용자 권한으로** 실행됩니다. 설치 전에 아래 [보안](#보안)을 읽어 주세요.
 
 ## mod 목록

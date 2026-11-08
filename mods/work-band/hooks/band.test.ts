@@ -67,7 +67,7 @@ test('a TaskUpdate for an unknown task changes nothing', async ($, on) => {
 // Not `world`: a second mock of the same tool would race the first.
 test('a refused to-do call leaves the band alone', async ($, on) => {
   mock.clock(on)
-  on('ui.render', () => ({ type: 'engine' }) as never)
+  on('ui.render', () => ({ type: 'engine', ref: 0 }) as never)
   on('tool.call', { tool: 'TodoWrite' }, () => ({ deny: 'not now' }) as never)
   await todoWrite($, TODOS)
   expect(await band($, 'terminal')).toBeNull()

@@ -12,7 +12,7 @@
 /plugin install work-band --marketplace StarHawkMK1/cc-mods
 ```
 
-이미 `cc-mods` 마켓플레이스를 추가했다면 `claude plugin install work-band@cc-mods --scope user`로도 됩니다. 테스트한 버전은 Claude Code 2.1.299~2.1.301(Windows 11)입니다.
+이미 `cc-mods` 마켓플레이스를 추가했다면 `claude plugin install work-band@cc-mods --scope user`로도 됩니다. 테스트한 버전은 Claude Code 2.1.299~2.1.301(Windows 11)이고, `claude plugin test`는 2.1.318·2.1.319(Linux)에서 통과합니다.
 
 ## 무엇을 보여 주나
 

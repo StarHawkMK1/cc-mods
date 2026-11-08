@@ -13,7 +13,7 @@ export const PANE_PROPS = { title: '', isFocused: false, bodyColumns: 60, placem
 // open and close, files from `files`, and tools, prompts and subagents that succeed.
 export function world(on: On, now = 1_000, files: Record<string, string> = {}) {
   const clock = mock.clock(on, { now })
-  on('ui.render', () => ({ type: 'engine' }) as never)
+  on('ui.render', () => ({ type: 'engine', ref: 0 }) as never)
   let panes: { id: string; title: string }[] = []
   on('ui.panes', () => ({ value: panes }) as never)
   on('ui.open', (_$, e) => {
@@ -64,6 +64,9 @@ export async function band($: Engine, surface: Surface): Promise<string | null> 
     const svg = await ui.find({ type: 'Svg' })
     const texts = await ui.findAll({ type: 'Text' })
     await ui.unmount()
+    // Since 2.1.318 the engine's placeholder (with its ref) mounts instead of
+    // throwing "drew nothing": no Svg and no Text means the mod drew nothing.
+    if (surface === 'desktop' ? !svg : texts.length === 0) return null
     return surface === 'desktop' ? String(svg?.props.source) : texts.map(t => t.text).join(' | ')
   } catch (err) {
     if (/drew nothing/.test(String(err))) return null

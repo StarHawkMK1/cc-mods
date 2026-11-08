@@ -135,7 +135,7 @@ test('other skills change nothing', async ($, on) => {
 // Not `world`: a second mock of the same tool would race the first.
 test('a failed skill call changes nothing', async ($, on) => {
   mock.clock(on)
-  on('ui.render', () => ({ type: 'engine' }) as never)
+  on('ui.render', () => ({ type: 'engine', ref: 0 }) as never)
   on('tool.call', { tool: 'Skill' }, () => ({ result: { success: false, commandName: 'x' } }) as never)
   await skill($, 'superpowers:brainstorming', 'Auth')
   expect(await band($, 'terminal')).toBeNull()
